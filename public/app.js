@@ -33,12 +33,12 @@
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('fm_theme', theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#332417' : '#fff8e7');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1f2a23' : '#f4f7f1');
     $('#btnTheme').setAttribute('aria-pressed', String(theme === 'dark'));
   }
 
   try { state.me = JSON.parse(localStorage.getItem('fm_me') || 'null'); } catch (_) { localStorage.removeItem('fm_me'); }
-  const themeVersion = 'warm-v1';
+  const themeVersion = 'market-v1';
   const savedTheme = localStorage.getItem('fm_theme');
   applyTheme(localStorage.getItem('fm_theme_version') === themeVersion && savedTheme ? savedTheme : 'light');
   localStorage.setItem('fm_theme_version', themeVersion);
@@ -84,6 +84,7 @@
       const value = Number(dot.dataset.step);
       dot.classList.toggle('active', value === step);
       dot.classList.toggle('done', value < step);
+      dot.toggleAttribute('aria-current', value === step);
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (step === 3) $('#mealDate').textContent = `${dateLabel(state.date)} · ${mealName(state.meal)}`;
@@ -117,7 +118,7 @@
 
   function renderCategories() {
     const values = ['全部', ...state.categories.map(item => item.category)];
-    dom.category.innerHTML = values.map(category => `<button class="chip ${state.category === category ? 'active' : ''}" data-category="${esc(category)}">${esc(category)}</button>`).join('');
+    dom.category.innerHTML = values.map(category => `<button class="chip ${state.category === category ? 'active' : ''}" data-category="${esc(category)}" aria-pressed="${state.category === category}">${esc(category)}</button>`).join('');
     const defaults = ['家常菜', '火锅', '西餐', '日料', '面食', '汤羹', '甜品饮品'];
     const options = [...new Set([...defaults, ...state.categories.map(item => item.category)])];
     dom.dishCategory.innerHTML = options.map(category => `<option value="${esc(category)}">${esc(category)}</option>`).join('');
@@ -139,7 +140,7 @@
       const visual = image
         ? `<img class="dish-img" src="${image}" alt="${esc(dish.name)}" width="320" height="200" loading="lazy" decoding="async">`
         : '<div class="dish-img-fb">🍽️</div>';
-      return `<article class="dish-card ${selected ? 'mine' : ''}"><div class="dish-img-wrap">${visual}<span class="dish-cat-tag">${esc(dish.category)}</span><button class="dish-fav ${favorite ? 'on' : ''}" data-favorite-id="${dish.id}" aria-label="${favorite ? '取消收藏' : '收藏'} ${esc(dish.name)}" aria-pressed="${favorite}">${favorite ? '♥' : '♡'}</button></div><div class="dish-body"><h3 class="dish-name">${esc(dish.name)}</h3><p class="dish-desc">${esc(dish.description || '')}</p><div class="dish-footer"><span class="dish-count">${picked.length ? `${picked.length} 人想吃` : ''}</span><button class="dish-btn ${selected ? 'chosen' : ''}" data-dish-id="${dish.id}" ${selected ? 'disabled' : ''}>${selected ? '已选' : '选这个'}</button></div></div></article>`;
+      return `<article class="dish-card ${selected ? 'mine' : ''}"><div class="dish-img-wrap">${visual}<button class="dish-fav ${favorite ? 'on' : ''}" data-favorite-id="${dish.id}" aria-label="${favorite ? '取消收藏' : '收藏'} ${esc(dish.name)}" aria-pressed="${favorite}">${favorite ? '♥' : '♡'}</button></div><div class="dish-body"><span class="dish-cat-tag">${esc(dish.category)}</span><h3 class="dish-name">${esc(dish.name)}</h3><p class="dish-desc">${esc(dish.description || '')}</p><div class="dish-footer"><span class="dish-count">${picked.length ? `${picked.length} 人想吃` : ''}</span><button class="dish-btn ${selected ? 'chosen' : ''}" data-dish-id="${dish.id}" ${selected ? 'disabled' : ''}>${selected ? '已选' : '选这个'}</button></div></div></article>`;
     }).join('');
   }
 
