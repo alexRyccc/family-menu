@@ -1534,3 +1534,20 @@ body { background: var(--bg); color: var(--text); }
 .chip small { margin-left: 2px; color: inherit; font-size: 11px; opacity: 0.72; }
 .plan-progress { margin: -4px 0 14px; color: var(--text-secondary); font-size: 14px; }
 .quick-dish-hint { margin-bottom: 10px; }
+
+/* ---------- 选菜完成时刻 ---------- */
+.done-message { min-height: 22px; margin: -8px 0 16px; color: var(--text-secondary); font-size: 15px; }
+.done-card { position: relative; overflow: hidden; border-color: var(--border-strong); }
+.done-card::before { content: ''; position: absolute; inset: 0 0 auto; height: 4px; background: var(--accent); }
+.done-dish { align-items: center; }
+.done-dish img { width: 96px; height: 96px; border-radius: 8px; }
+.done-share { min-height: 40px; margin-top: 16px; color: var(--text-secondary); font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+.done-share:hover { color: var(--accent); }
+.done-share:focus-visible, .dish-mode:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 3px; }
+.table-note { margin: -4px 0 16px; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+.celebration-layer { position: fixed; z-index: 500; inset: 0; pointer-events: none; overflow: hidden; }
+.celebration-particle { position: absolute; top: 18vh; left: var(--x); color: var(--accent); font-size: 22px; opacity: 0; animation: celebrate-drop 900ms cubic-bezier(.16,.84,.34,1) var(--delay) both; transform: rotate(var(--turn)); }
+.celebration-particle:nth-child(3n) { color: #e2b949; }
+.celebration-particle:nth-child(3n + 2) { color: #718d75; }
+@keyframes celebrate-drop { 0% { opacity: 0; transform: translateY(-32px) rotate(0deg) scale(.5); } 18% { opacity: 1; } 100% { opacity: 0; transform: translateY(320px) rotate(var(--turn)) scale(1); } }
+@media (max-width: 640px) { .done-dish img { width: 76px; height: 76px; } .done-actions { flex-direction: column-reverse; } .done-actions > * { width: 100%; } }

@@ -16,7 +16,7 @@
     meAvatar: $('#meAvatar'), meName: $('#meName'), conn: $('#connDot'), stepBar: $('#stepBar'),
     search: $('#searchInput'), searchClear: $('#searchClear'), favorite: $('#chipFav'), adminList: $('#adminList'),
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
-    voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), notifyStatus: $('#notifyStatus')
+    voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
@@ -68,6 +68,26 @@
     dom.toast.className = `toast show${kind === 'info' ? '' : ` ${kind}`}`;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => dom.toast.classList.remove('show'), kind === 'error' ? 4200 : 2800);
+  }
+
+  function celebrate() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    dom.celebration.replaceChildren();
+    for (let index = 0; index < 22; index += 1) {
+      const particle = document.createElement('span');
+      particle.className = 'celebration-particle';
+      particle.style.setProperty('--x', `${8 + Math.random() * 84}vw`);
+      particle.style.setProperty('--delay', `${Math.random() * 180}ms`);
+      particle.style.setProperty('--turn', `${-110 + Math.random() * 220}deg`);
+      particle.textContent = index % 3 === 0 ? '\u2728' : index % 3 === 1 ? '\u2022' : '\u2605';
+      dom.celebration.append(particle);
+    }
+    window.setTimeout(() => dom.celebration.replaceChildren(), 1100);
+  }
+
+  function renderTableNote() {
+    const notes = ['今天的餐桌，从一道想吃的菜开始。', '有人一起想吃，就是一顿饭最好的调味。', '不用想得太久，选一道合心意的就好。', '今晚吃什么，让家人一起决定。', '冰箱里的食材，也值得一顿好好安排。', '去尝一道没吃过的，今天就会有新惊喜。', '一起吃饭的时候，世界会慢一点。'];
+    dom.tableNote.textContent = notes[new Date().getDay()];
   }
 
   function setConnection(status) {
@@ -136,6 +156,7 @@
     let dishes = state.onlyFavorites ? state.dishes.filter(dish => state.favorites.has(dish.id)) : [...state.dishes];
     const frequentIds = new Set(state.recommendations.frequent.map(dish => dish.id));
     const neverIds = new Set(state.recommendations.never.map(dish => dish.id));
+    if (state.dishMode === 'smart') dishes.sort((a, b) => Number(state.favorites.has(b.id)) - Number(state.favorites.has(a.id)) || Number(frequentIds.has(b.id)) - Number(frequentIds.has(a.id)) || b.id - a.id);
     if (state.dishMode === 'frequent') dishes.sort((a, b) => Number(frequentIds.has(b.id)) - Number(frequentIds.has(a.id)) || b.id - a.id);
     if (state.dishMode === 'new') dishes.sort((a, b) => Number(neverIds.has(b.id)) - Number(neverIds.has(a.id)) || b.id - a.id);
     if (!dishes.length) {
@@ -161,6 +182,7 @@
     const groups = { lunch: [], dinner: [] };
     state.plan.forEach(item => groups[item.meal]?.push(item));
     dom.planProgress.textContent = `已安排 ${state.plan.length} 份餐点`;
+    renderTableNote();
     if (!groups.lunch.length && !groups.dinner.length) {
       dom.summary.innerHTML = `<div class="today-row empty">${state.date === today() ? '今天' : dateLabel(state.date)}还没有安排，先选一道吧。</div>`;
       return;
@@ -237,9 +259,24 @@
     if (!state.me) return toast('请先选择家人', 'error');
     await api('/api/select', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dish_id: id, user_id: state.me.id, meal: state.meal, date: state.date }) });
     const dish = state.dishes.find(item => item.id === id);
-    $('#doneDish').innerHTML = `<div class="done-dish-info"><div class="done-dish-name">${esc(dish?.name || '')}</div><div class="done-dish-cat">${esc(dish?.category || '')}</div></div>`;
+    const image = imageUrl(dish?.image);
+    const visual = image ? `<img src="${image}" alt="${esc(dish?.name || '')}" width="96" height="96">` : '<div class="done-img-fb">🍽️</div>';
+    $('#doneDish').innerHTML = `${visual}<div class="done-dish-info"><div class="done-dish-name">${esc(dish?.name || '')}</div><div class="done-dish-cat">${esc(dish?.category || '')}</div></div>`;
+    $('#doneMessage').textContent = `${state.me.name}，${mealName(state.meal)}就选它了。`;
     $('#btnDoneOk').dataset.dishId = id;
-    setStep(4); await refreshDashboard();
+    setStep(4); celebrate(); await refreshDashboard();
+  }
+
+  async function shareSelection() {
+    const selected = state.selections[state.meal];
+    const dishName = selected?.dish_name || $('#doneDish .done-dish-name')?.textContent;
+    if (!dishName) return toast('请先选一道菜。');
+    const text = `${state.me?.name || '我'}点了${mealName(state.meal)}：${dishName}`;
+    try {
+      if (navigator.share) await navigator.share({ title: '猫家点菜', text });
+      else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); toast('餐单已复制，发给家人吧。', 'success'); }
+      else toast(text);
+    } catch (error) { if (error.name !== 'AbortError') toast('分享暂未完成。', 'error'); }
   }
 
   async function toggleFavorite(id) {
@@ -365,6 +402,7 @@
       if (button.id === 'btnAddFromEmpty') return openModal('adminModal');
       if (button.id === 'btnDoneBack') return setStep(3);
       if (button.id === 'btnDoneOk') return setStep(3);
+      if (button.id === 'btnShareSelection') return shareSelection();
       if (button.id === 'btnShake') { state.shakeDish = state.dishes[Math.floor(Math.random() * state.dishes.length)]; if (!state.shakeDish) return; $('#shakeResult').textContent = '正在挑选...'; $('#btnShakeAgain').disabled = true; $('#btnShakeClose').disabled = false; openModal('shakeModal'); setTimeout(() => { $('#shakeResult').innerHTML = `<strong>${esc(state.shakeDish.name)}</strong><p>${esc(state.shakeDish.category)}</p>`; $('#btnShakeAgain').disabled = false; }, 500); return; }
       if (button.id === 'btnShakeAgain' && state.shakeDish) { closeModal('shakeModal'); return chooseDish(state.shakeDish.id); }
       if (button.id === 'btnShakeClose') return closeModal('shakeModal');

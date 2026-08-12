@@ -116,11 +116,13 @@
       <div class="done-card">
         <div class="done-icon">🎉</div>
         <h2>选好了!</h2>
+        <p id="doneMessage" class="done-message" role="status" aria-live="polite"></p>
         <div id="doneDish" class="done-dish"></div>
         <div class="done-actions">
           <button id="btnDoneBack" class="btn-secondary btn-lg">再选一个</button>
           <button id="btnDoneOk" class="btn-primary btn-lg">就这个!</button>
         </div>
+        <button id="btnShareSelection" class="done-share" type="button">分享这份餐单</button>
       </div>
     </section>
 
@@ -128,6 +130,7 @@
     <section class="feed-section" id="feedSection">
       <h2 class="feed-title" id="planTitle">今天谁吃了什么</h2>
       <p id="planProgress" class="plan-progress" aria-live="polite"></p>
+      <p id="tableNote" class="table-note"></p>
       <div id="todaySummary" class="today-summary"></div>
       <h3 class="feed-subtitle">🔔 最新动态</h3>
       <div id="feedList" class="feed-list"></div>
@@ -315,6 +318,7 @@
 
   <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="celebrationLayer" class="celebration-layer" aria-hidden="true"></div>
 
   <script src="/app.js"></script>
 </body>
