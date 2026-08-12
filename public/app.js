@@ -16,12 +16,12 @@
     meAvatar: $('#meAvatar'), meName: $('#meName'), conn: $('#connDot'), stepBar: $('#stepBar'),
     search: $('#searchInput'), searchClear: $('#searchClear'), favorite: $('#chipFav'), adminList: $('#adminList'),
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
-    voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), notifyStatus: $('#notifyStatus')
+    voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), notifyStatus: $('#notifyStatus')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
   const state = {
-    me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null },
+    me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
     meal: 'lunch', date: today(), category: '全部', query: '', onlyFavorites: false, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null
   };
   let toastTimer;
@@ -29,6 +29,13 @@
 
   // Keep the brand and the four-step flow in one sticky header on narrow screens.
   $('#topbar').append(dom.stepBar);
+
+  // Keep the common case to name + category + optional local photo.
+  ['#dishDesc', '#dishImg'].forEach(selector => {
+    const field = $(selector);
+    field?.previousElementSibling?.remove();
+    field?.remove();
+  });
 
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
@@ -118,14 +125,19 @@
 
   function renderCategories() {
     const values = ['全部', ...state.categories.map(item => item.category)];
-    dom.category.innerHTML = values.map(category => `<button class="chip ${state.category === category ? 'active' : ''}" data-category="${esc(category)}" aria-pressed="${state.category === category}">${esc(category)}</button>`).join('');
+    const counts = new Map(state.categories.map(item => [item.category, item.count]));
+    dom.category.innerHTML = values.map(category => `<button class="chip ${state.category === category ? 'active' : ''}" data-category="${esc(category)}" aria-pressed="${state.category === category}">${esc(category)}${category === '鍏ㄩ儴' ? '' : ` <small>${counts.get(category) || 0}</small>`}</button>`).join('');
     const defaults = ['家常菜', '火锅', '西餐', '日料', '面食', '汤羹', '甜品饮品'];
     const options = [...new Set([...defaults, ...state.categories.map(item => item.category)])];
     dom.dishCategory.innerHTML = options.map(category => `<option value="${esc(category)}">${esc(category)}</option>`).join('');
   }
 
   function renderDishes() {
-    let dishes = state.onlyFavorites ? state.dishes.filter(dish => state.favorites.has(dish.id)) : state.dishes;
+    let dishes = state.onlyFavorites ? state.dishes.filter(dish => state.favorites.has(dish.id)) : [...state.dishes];
+    const frequentIds = new Set(state.recommendations.frequent.map(dish => dish.id));
+    const neverIds = new Set(state.recommendations.never.map(dish => dish.id));
+    if (state.dishMode === 'frequent') dishes.sort((a, b) => Number(frequentIds.has(b.id)) - Number(frequentIds.has(a.id)) || b.id - a.id);
+    if (state.dishMode === 'new') dishes.sort((a, b) => Number(neverIds.has(b.id)) - Number(neverIds.has(a.id)) || b.id - a.id);
     if (!dishes.length) {
       dom.dishGrid.innerHTML = '';
       dom.dishEmpty.classList.remove('hidden');
@@ -148,6 +160,7 @@
     dom.planTitle.textContent = state.date === today() ? '今天谁吃了什么' : `${dateLabel(state.date)} 的安排`;
     const groups = { lunch: [], dinner: [] };
     state.plan.forEach(item => groups[item.meal]?.push(item));
+    dom.planProgress.textContent = `已安排 ${state.plan.length} 份餐点`;
     if (!groups.lunch.length && !groups.dinner.length) {
       dom.summary.innerHTML = `<div class="today-row empty">${state.date === today() ? '今天' : dateLabel(state.date)}还没有安排，先选一道吧。</div>`;
       return;
@@ -245,15 +258,16 @@
     const name = $('#dishName').value.trim();
     if (!name) return toast('请填写菜品名称', 'error');
     const form = new FormData();
-    form.set('name', name); form.set('category', dom.dishCategory.value); form.set('description', $('#dishDesc').value.trim()); form.set('image_url', $('#dishImg').value.trim());
+    form.set('name', name); form.set('category', dom.dishCategory.value); form.set('description', `${name}，等待家人来尝一尝。`);
     const file = $('#dishFile')?.files?.[0]; if (file) form.set('image', file);
     const response = await fetch('/api/dishes', { method: 'POST', body: form });
     const data = await response.json(); if (!response.ok) throw new Error(data.error || '添加失败');
-    ['#dishName', '#dishDesc', '#dishImg'].forEach(id => { $(id).value = ''; });
+    $('#dishName').value = ''; $('#dishFile').value = '';
     await Promise.all([loadDishes(), loadCategories()]); toast(data.warning || '菜品已添加', 'success');
   }
 
   async function loadCategories() { state.categories = await api('/api/categories'); renderCategories(); }
+  async function loadRecommendations() { state.recommendations = await api('/api/recommendations'); renderDishes(); }
 
   async function showHistory() {
     const data = await api('/api/history?days=7');
@@ -324,6 +338,7 @@
       if (button.dataset.avatar) { state.selectedAvatar = button.dataset.avatar; return renderAvatarPicker(); }
       if (button.dataset.category) { state.category = button.dataset.category; await loadDishes(); return renderCategories(); }
       if (button.dataset.dishId) return chooseDish(Number(button.dataset.dishId));
+      if (button.dataset.dishMode) { state.dishMode = button.dataset.dishMode; $$('#dishModes .dish-mode').forEach(item => { const active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); }); return renderDishes(); }
       if (button.dataset.favoriteId) return toggleFavorite(Number(button.dataset.favoriteId));
       if (button.dataset.deleteDish) { if (confirm('删除这道菜及其相关选择？')) { await api(`/api/dishes/${button.dataset.deleteDish}`, { method: 'DELETE' }); await loadDishes(); } return; }
       if (button.dataset.deleteTarget) { await api(`/api/notify/targets/${button.dataset.deleteTarget}`, { method: 'DELETE' }); return showNotify(); }
@@ -363,6 +378,7 @@
   dom.search.addEventListener('input', () => { state.query = dom.search.value.trim(); dom.searchClear.classList.toggle('hidden', !state.query); clearTimeout(dom.search.timer); dom.search.timer = setTimeout(() => loadDishes().catch(error => toast(error.message, 'error')), 250); });
   $$('.meal-card').forEach(card => card.addEventListener('click', () => { state.meal = card.dataset.meal; setStep(3); loadDishes().catch(error => toast(error.message, 'error')); }));
   document.addEventListener('keydown', event => {
+    if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { event.preventDefault(); dom.search.focus(); return; }
     const modal = $('.modal-overlay:not(.hidden)');
     if (event.key === 'Escape' && modal) return closeModal(modal.id);
     if (event.key !== 'Tab' || !modal) return;
@@ -378,7 +394,7 @@
   async function initialize() {
     try {
       dom.whoError.classList.add('hidden');
-      await Promise.all([loadUsers(), loadCategories(), loadFeed()]);
+      await Promise.all([loadUsers(), loadCategories(), loadFeed(), loadRecommendations()]);
       if (state.me) { updateIdentity(); setStep(2); await refreshDashboard(); } else setStep(1);
       connectEvents();
     } catch (error) { dom.whoError.classList.remove('hidden'); toast(error.message, 'error'); }

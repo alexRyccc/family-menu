@@ -84,6 +84,11 @@
         <div id="catChips" class="cat-chips"></div>
         <button id="chipFav" class="chip chip-fav" aria-pressed="false">🤍 收藏</button>
       </div>
+      <div id="dishModes" class="dish-modes" aria-label="菜品排序方式">
+        <button class="dish-mode active" data-dish-mode="smart" aria-pressed="true">推荐</button>
+        <button class="dish-mode" data-dish-mode="frequent" aria-pressed="false">常点</button>
+        <button class="dish-mode" data-dish-mode="new" aria-pressed="false">尝鲜</button>
+      </div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input id="searchInput" class="search-input" type="search" name="dish-search" placeholder="搜索菜品…" aria-label="搜索菜品" autocomplete="off">
@@ -122,6 +127,7 @@
     <!-- 今日安排 -->
     <section class="feed-section" id="feedSection">
       <h2 class="feed-title" id="planTitle">今天谁吃了什么</h2>
+      <p id="planProgress" class="plan-progress" aria-live="polite"></p>
       <div id="todaySummary" class="today-summary"></div>
       <h3 class="feed-subtitle">🔔 最新动态</h3>
       <div id="feedList" class="feed-list"></div>

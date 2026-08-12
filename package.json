@@ -4,7 +4,8 @@
   "description": "家庭点菜小程序 - 局域网多人使用",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "seed:prepared": "node seed-prepared-menu.js",
+    "start": "node seed.js && node seed-prepared-menu.js && node server.js"
   },
   "dependencies": {
     "@alicloud/pop-core": "^1.8.0",

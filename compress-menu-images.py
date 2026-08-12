@@ -4,7 +4,7 @@ from PIL import Image
 
 UPLOADS = Path(__file__).resolve().parent / 'uploads'
 
-for source in sorted(UPLOADS.glob('menu-*.png')):
+for source in sorted([*UPLOADS.glob('menu-*.png'), *UPLOADS.glob('prepared-*.jpg')]):
     target = source.with_suffix('.webp')
     with Image.open(source) as image:
         image = image.convert('RGB')
