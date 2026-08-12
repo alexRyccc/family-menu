@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#fff8e7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>猫家点菜</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐱</text></svg>">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <!-- 步骤指示器 -->
+  <div id="stepBar" class="step-bar hidden">
+    <div class="step-dots">
+      <span class="step-dot active" data-step="1"><b>1</b><small>选人</small></span>
+      <span class="step-dot" data-step="2"><b>2</b><small>选餐</small></span>
+      <span class="step-dot" data-step="3"><b>3</b><small>选菜</small></span>
+      <span class="step-dot" data-step="4"><b>4</b><small>完成</small></span>
+    </div>
+  </div>
+
+  <!-- 顶栏 -->
+  <header class="topbar" id="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">🐱 猫家点菜</span>
+      <span id="connDot" class="conn-dot" title="连接中..."></span>
+    </div>
+    <div class="topbar-actions">
+      <button id="btnMe" class="me-btn" aria-label="切换家人">
+        <span id="meAvatar" class="me-avatar"></span>
+        <span id="meName" class="me-name"></span>
+      </button>
+      <button id="btnTheme" class="icon-btn" aria-label="切换深色/浅色" aria-pressed="false">🌓</button>
+      <button id="btnMore" class="icon-btn" aria-label="更多">⋯</button>
+    </div>
+  </header>
+
+  <!-- 主内容 -->
+  <main class="main" id="main">
+
+    <!-- 步骤 1: 选人 -->
+    <section id="step1" class="step-section">
+      <div class="step-hero">
+        <h1>今天谁点菜?</h1>
+        <p>点击你的头像开始</p>
+      </div>
+      <div id="whoGrid" class="who-grid"></div>
+      <div id="whoError" class="who-error hidden">
+        <div class="empty-art">📡</div>
+        <p>连不上服务器</p>
+        <button id="btnWhoRetry" class="btn-primary btn-lg">重试</button>
+      </div>
+    </section>
+
+    <!-- 步骤 2: 选餐 -->
+    <section id="step2" class="step-section hidden">
+      <div class="step-hero">
+        <h1>中饭还是晚饭?</h1>
+        <p id="mealDate"></p>
+      </div>
+      <div class="meal-choice">
+        <button class="meal-card" data-meal="lunch">
+          <span class="meal-icon">🍚</span>
+          <span class="meal-label">中饭</span>
+        </button>
+        <button class="meal-card" data-meal="dinner">
+          <span class="meal-icon">🍽️</span>
+          <span class="meal-label">晚饭</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 步骤 3: 选菜 -->
+    <section id="step3" class="step-section hidden">
+      <div class="step-hero-sm">
+        <h2>想吃什么?</h2>
+        <p>点一道菜告诉家人</p>
+      </div>
+      <div class="filter-row">
+        <div id="catChips" class="cat-chips"></div>
+        <button id="chipFav" class="chip chip-fav" aria-pressed="false">🤍 收藏</button>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input id="searchInput" class="search-input" type="search" name="dish-search" placeholder="搜索菜品…" aria-label="搜索菜品" autocomplete="off">
+        <button id="searchClear" class="search-clear hidden" aria-label="清除">✕</button>
+      </div>
+      <div id="skeletonGrid" class="skeleton-grid hidden"></div>
+      <div id="dishGrid" class="dish-grid"></div>
+      <div id="dishError" class="dish-empty hidden">
+        <div class="empty-art">📡</div>
+        <p>加载失败</p>
+        <button id="btnDishRetry" class="btn-primary btn-lg">重试</button>
+      </div>
+      <div id="dishEmpty" class="dish-empty hidden">
+        <div class="empty-art">🔍</div>
+        <p>没有找到相关菜品</p>
+        <button id="btnAddFromEmpty" class="btn-primary btn-lg">➕ 添加菜品</button>
+      </div>
+      <div class="shake-bar">
+        <button id="btnShake" class="btn-shake">🎲 帮我选</button>
+      </div>
+    </section>
+
+    <!-- 步骤 4: 完成 -->
+    <section id="step4" class="step-section hidden">
+      <div class="done-card">
+        <div class="done-icon">🎉</div>
+        <h2>选好了!</h2>
+        <div id="doneDish" class="done-dish"></div>
+        <div class="done-actions">
+          <button id="btnDoneBack" class="btn-secondary btn-lg">再选一个</button>
+          <button id="btnDoneOk" class="btn-primary btn-lg">就这个!</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 今日安排 -->
+    <section class="feed-section" id="feedSection">
+      <h2 class="feed-title" id="planTitle">今天谁吃了什么</h2>
+      <div id="todaySummary" class="today-summary"></div>
+      <h3 class="feed-subtitle">🔔 最新动态</h3>
+      <div id="feedList" class="feed-list"></div>
+    </section>
+  </main>
+
+  <!-- 更多菜单 -->
+  <div id="moreMenu" class="modal-overlay hidden">
+    <div class="modal menu-modal">
+      <h3>更多功能</h3>
+      <button class="menu-item" id="menuWeekly">📆 一周食谱</button>
+      <button class="menu-item" id="menuVotes">🗳️ 投票选菜</button>
+      <button class="menu-item" id="menuHistory">📅 历史记录</button>
+      <button class="menu-item" id="menuAdmin">⚙️ 管理菜品</button>
+      <button class="menu-item" id="menuNotify">🔔 通知设置</button>
+      <button class="menu-item" data-close="moreMenu">关闭</button>
+    </div>
+  </div>
+
+  <!-- 一周食谱弹窗 -->
+  <div id="weeklyModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:700px">
+      <h3>📆 一周食谱规划</h3>
+      <p class="modal-desc">提前规划未来7天的菜单</p>
+      <div id="weeklyGrid" class="weekly-grid"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" data-close="weeklyModal">关闭</button>
+        <button class="btn-primary" id="btnRefreshWeekly">刷新</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 投票弹窗 -->
+  <div id="votesModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:600px">
+      <h3>🗳️ 投票选菜</h3>
+      <p class="modal-desc">发起投票让全家决定吃什么</p>
+      <div id="votesList" class="votes-list"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <h4 style="font-size:16px;font-weight:600;margin-bottom:8px">发起新投票</h4>
+      <label for="voteTitle">投票标题</label>
+      <input id="voteTitle" type="text" name="vote-title" placeholder="例如：晚饭吃什么？" maxlength="60" autocomplete="off" style="margin-bottom:8px">
+      <div class="cfg-row" style="display:flex;gap:8px">
+        <select id="voteMeal" class="select-input" style="flex:1">
+          <option value="lunch">🍚 中饭</option>
+          <option value="dinner">🍽️ 晚饭</option>
+        </select>
+        <input id="voteDate" type="date" style="flex:1">
+      </div>
+      <label style="display:block;font-size:15px;font-weight:600;margin:12px 0 6px">候选菜品(可多选)</label>
+      <div id="voteDishGrid" class="vote-dish-grid"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" data-close="votesModal">关闭</button>
+        <button class="btn-primary" id="btnCreateVote">发起投票</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理弹窗 -->
+  <div id="adminModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>⚙️ 管理菜品</h3>
+      <p class="modal-desc">添加或删除菜品</p>
+      <div id="adminList"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+      <h4 style="font-size:18px;font-weight:600;margin-bottom:12px">添加新菜品</h4>
+      <label>菜品名称</label>
+      <input id="dishName" type="text" name="dish-name" placeholder="例如：红烧肉" maxlength="40" autocomplete="off">
+      <label>分类</label>
+      <select id="dishCat" class="select-input"></select>
+      <label>描述(可选)</label>
+      <textarea id="dishDesc" placeholder="简单描述..." maxlength="200"></textarea>
+      <label>图片URL(可选)</label>
+      <input id="dishImg" type="url" name="dish-image-url" placeholder="https://example.com/image.jpg" autocomplete="off">
+      <label>本地图片(可选)</label>
+      <input id="dishFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+      <div class="btn-row">
+        <button class="btn-secondary" data-close="adminModal">取消</button>
+        <button class="btn-primary" id="btnAddDish">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 历史弹窗 -->
+  <div id="historyModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>📅 本周安排</h3>
+      <p class="modal-desc">最近7天全家人的选择</p>
+      <div id="historyList"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" data-close="historyModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通知设置弹窗 -->
+  <div id="notifyModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>🔔 通知设置</h3>
+      <p class="modal-desc">有人点菜时通知以下人员</p>
+      <div id="notifyTargetList"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <h4 style="font-size:16px;font-weight:600;margin-bottom:8px">添加通知人</h4>
+      <label for="ntName">通知人名称</label>
+      <input id="ntName" type="text" name="notify-name" placeholder="例如：妈妈" autocomplete="off" style="margin-bottom:8px">
+      <label for="ntEmail">邮箱</label>
+      <input id="ntEmail" type="email" name="notify-email" placeholder="可选" autocomplete="off" spellcheck="false" style="margin-bottom:8px">
+      <label for="ntPhone">手机号</label>
+      <input id="ntPhone" type="tel" name="notify-phone" inputmode="tel" placeholder="可选" autocomplete="off" style="margin-bottom:8px">
+      <button class="btn-primary" id="btnAddTarget" style="width:100%;margin-bottom:16px">添加</button>
+      <h4 style="font-size:16px;font-weight:600;margin-bottom:8px">邮件服务(SMTP)</h4>
+      <div class="cfg-row"><input id="cfgEmailHost" type="text" placeholder="SMTP服务器"></div>
+      <div class="cfg-row"><input id="cfgEmailUser" type="text" placeholder="邮箱账号"></div>
+      <div class="cfg-row"><input id="cfgEmailPass" type="password" placeholder="密码/授权码"></div>
+      <h4 style="font-size:16px;font-weight:600;margin:12px 0 8px">阿里云短信</h4>
+      <p id="notifyStatus" class="notify-status" role="status"></p>
+      <div class="cfg-row"><input id="cfgSmsKey" type="text" placeholder="AccessKeyId"></div>
+      <div class="cfg-row"><input id="cfgSmsSecret" type="password" placeholder="AccessKeySecret"></div>
+      <div class="cfg-row"><input id="cfgSmsSign" type="text" placeholder="短信签名"></div>
+      <div class="cfg-row"><input id="cfgSmsTpl" type="text" placeholder="点菜模板 CODE" aria-label="点菜短信模板 CODE"></div>
+      <div class="cfg-row"><input id="cfgSmsReminderTpl" type="text" placeholder="提醒模板 CODE" aria-label="用餐提醒短信模板 CODE"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" data-close="notifyModal">关闭</button>
+        <button class="btn-primary" id="btnSaveNotify">保存配置</button>
+      </div>
+      <button class="btn-test" id="btnTestNotify">📤 发送测试通知</button>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <h4 style="font-size:16px;font-weight:600;margin-bottom:8px">⏰ 用餐提醒</h4>
+      <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:8px">到点自动通知家人点菜</p>
+      <div class="cfg-row" style="display:flex;gap:8px;align-items:center">
+        <span style="min-width:50px">🍚 中饭</span>
+        <input id="remindLunchTime" type="time" value="10:30" style="flex:1">
+        <label style="display:flex;align-items:center;gap:4px;font-size:14px;white-space:nowrap"><input id="remindLunchEnabled" type="checkbox" checked> 启用</label>
+      </div>
+      <div class="cfg-row" style="display:flex;gap:8px;align-items:center;margin-top:6px;margin-bottom:12px">
+        <span style="min-width:50px">🍽️ 晚饭</span>
+        <input id="remindDinnerTime" type="time" value="16:30" style="flex:1">
+        <label style="display:flex;align-items:center;gap:4px;font-size:14px;white-space:nowrap"><input id="remindDinnerEnabled" type="checkbox" checked> 启用</label>
+      </div>
+      <button class="btn-primary" id="btnSaveReminders" style="width:100%">保存提醒设置</button>
+    </div>
+  </div>
+
+  <!-- 新增家人弹窗 -->
+  <div id="addUserModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>➕ 新增家人</h3>
+      <p class="modal-desc">选择一个头像</p>
+      <label>名字</label>
+      <input id="newUserName" type="text" name="user-name" placeholder="例如：猫弟弟" maxlength="12" autocomplete="off">
+      <label>头像</label>
+      <div id="avatarGrid"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" data-close="addUserModal">取消</button>
+        <button class="btn-primary" id="btnAddUser">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 切换家人弹窗 -->
+  <div id="userModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3>👨‍👩‍👧‍👦 选择家人</h3>
+      <p class="modal-desc">切换当前点菜人</p>
+      <div id="switchGrid" class="switch-grid"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" data-close="userModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 摇一摇弹窗 -->
+  <div id="shakeModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal" style="text-align:center">
+      <div id="shakeRoll" class="shake-roll">🎲</div>
+      <h3 id="shakeTitle">摇一摇!</h3>
+      <p id="shakeSub" class="modal-desc">让命运帮你选一道菜</p>
+      <div id="shakeResult"></div>
+      <div class="btn-row" style="justify-content:center;margin-top:20px">
+        <button id="btnShakeClose" class="btn-secondary btn-lg" disabled>取消</button>
+        <button id="btnShakeAgain" class="btn-primary btn-lg" disabled>就这个!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

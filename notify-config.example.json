@@ -1,0 +1,20 @@
+{
+  "email": {
+    "enabled": false,
+    "host": "",
+    "port": 465,
+    "secure": true,
+    "user": "",
+    "pass": "",
+    "from": ""
+  },
+  "sms": {
+    "enabled": false,
+    "accessKeyId": "",
+    "accessKeySecret": "",
+    "signName": "",
+    "templateCode": "",
+    "reminderTemplateCode": ""
+  },
+  "targets": []
+}

@@ -1,0 +1,15 @@
+node_modules/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+notify-config.json
+family-menu-*.log
+family-menu-*.err.log
+.playwright-cli/
+
+# Superseded source images and obsolete atlases are kept locally only.
+uploads/dish-*.jpg
+uploads/food-atlas-*.png
+uploads/seed-*.svg
+fetch-*.js
+dish-images.json
