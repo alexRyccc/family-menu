@@ -89,6 +89,10 @@
         <button class="dish-mode" data-dish-mode="frequent" aria-pressed="false">常点</button>
         <button class="dish-mode" data-dish-mode="new" aria-pressed="false">尝鲜</button>
       </div>
+      <div class="quick-actions" aria-label="快捷点菜">
+        <button id="btnRepeatLast" class="quick-action hidden" type="button">上次同款</button>
+        <button id="btnAvoidRepeat" class="quick-action" type="button" aria-pressed="false">本周不重样</button>
+      </div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input id="searchInput" class="search-input" type="search" name="dish-search" placeholder="搜索菜品…" aria-label="搜索菜品" autocomplete="off">
@@ -122,6 +126,10 @@
           <button id="btnDoneBack" class="btn-secondary btn-lg">再选一个</button>
           <button id="btnDoneOk" class="btn-primary btn-lg">就这个!</button>
         </div>
+        <div class="done-utility">
+          <button id="btnUndoSelection" class="done-utility-btn" type="button">撤销这次选择</button>
+          <button id="btnNotifyFamily" class="done-utility-btn" type="button">提醒家人来看</button>
+        </div>
         <button id="btnShareSelection" class="done-share" type="button">分享这份餐单</button>
       </div>
     </section>
@@ -131,6 +139,7 @@
       <h2 class="feed-title" id="planTitle">今天谁吃了什么</h2>
       <p id="planProgress" class="plan-progress" aria-live="polite"></p>
       <p id="tableNote" class="table-note"></p>
+      <div id="pendingPeople" class="pending-people" aria-live="polite"></div>
       <div id="todaySummary" class="today-summary"></div>
       <h3 class="feed-subtitle">🔔 最新动态</h3>
       <div id="feedList" class="feed-list"></div>
@@ -146,6 +155,8 @@
       <button class="menu-item" id="menuHistory">📅 历史记录</button>
       <button class="menu-item" id="menuAdmin">⚙️ 管理菜品</button>
       <button class="menu-item" id="menuNotify">🔔 通知设置</button>
+      <button class="menu-item" id="menuStats">📊 餐桌统计</button>
+      <button class="menu-item" id="menuShortcuts">⌨️ 快捷操作</button>
       <button class="menu-item" data-close="moreMenu">关闭</button>
     </div>
   </div>
@@ -158,6 +169,7 @@
       <div id="weeklyGrid" class="weekly-grid"></div>
       <div class="btn-row">
         <button class="btn-secondary" data-close="weeklyModal">关闭</button>
+        <button class="btn-secondary" id="btnCopyWeekly">复制餐单</button>
         <button class="btn-primary" id="btnRefreshWeekly">刷新</button>
       </div>
     </div>
@@ -313,6 +325,29 @@
         <button id="btnShakeClose" class="btn-secondary btn-lg" disabled>取消</button>
         <button id="btnShakeAgain" class="btn-primary btn-lg" disabled>就这个!</button>
       </div>
+    </div>
+  </div>
+
+  <div id="statsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+    <div class="modal">
+      <h3 id="statsTitle">餐桌统计</h3>
+      <p class="modal-desc">看看这张餐桌最近偏爱什么。</p>
+      <div id="statsContent" class="stats-content" aria-live="polite"></div>
+      <div class="btn-row"><button class="btn-primary" data-close="statsModal">关闭</button></div>
+    </div>
+  </div>
+
+  <div id="shortcutsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+    <div class="modal">
+      <h3 id="shortcutsTitle">快捷操作</h3>
+      <p class="modal-desc">不离开当前页面，也能更快完成点餐。</p>
+      <div class="shortcut-list">
+        <div><kbd>/</kbd><span>搜索菜品</span></div>
+        <div><kbd>R</kbd><span>重复上次选择</span></div>
+        <div><kbd>N</kbd><span>切换本周不重样</span></div>
+        <div><kbd>Esc</kbd><span>关闭当前窗口</span></div>
+      </div>
+      <div class="btn-row"><button class="btn-primary" data-close="shortcutsModal">知道了</button></div>
     </div>
   </div>
 

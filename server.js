@@ -398,6 +398,18 @@ app.get('/api/my-selection', (req, res) => {
   res.json(row || null);
 });
 
+app.get('/api/recent-selection', (req, res) => {
+  const { user_id, meal, date } = req.query;
+  const userId = positiveInt(user_id);
+  if (!userId || !isMeal(meal) || !isDate(date)) return res.json(null);
+  const row = db.prepare(
+    `SELECT s.*, d.name AS dish_name, d.image, d.category
+     FROM selections s JOIN dishes d ON s.dish_id = d.id
+     WHERE s.user_id = ? AND s.meal = ? AND s.date < ? ORDER BY s.date DESC, s.created_at DESC LIMIT 1`
+  ).get(userId, meal, date);
+  res.json(row || null);
+});
+
 app.post('/api/select', (req, res) => {
   const { dish_id, user_id, meal, date: requestedDate } = req.body;
   const dishId = positiveInt(dish_id);
@@ -441,6 +453,18 @@ app.post('/api/select', (req, res) => {
   const targets = db.prepare('SELECT * FROM notify_targets ORDER BY id').all();
   notify.notifySelection({ user_name: user.name, dish_name: dish.name, meal, targets })
     .catch(error => console.error('[通知发送失败]', error.message));
+});
+
+app.delete('/api/select', (req, res) => {
+  const userId = positiveInt(req.query.user_id);
+  const { meal, date } = req.query;
+  if (!userId || !isMeal(meal) || !isDate(date)) return res.status(400).json({ error: '参数无效' });
+  const selection = db.prepare('SELECT * FROM selections WHERE user_id = ? AND meal = ? AND date = ?').get(userId, meal, date);
+  if (!selection) return res.json({ ok: true, changed: false });
+  db.prepare('DELETE FROM selections WHERE id = ?').run(selection.id);
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  pushNotification({ user_id: userId, user_name: user?.name || '家人', meal, type: 'undo', message: `${user?.name || '家人'}撤回了${meal === 'lunch' ? '中饭' : '晚饭'}的选择。` });
+  res.json({ ok: true, changed: true });
 });
 
 app.post('/api/notify', (req, res) => {
@@ -539,6 +563,21 @@ app.get('/api/recommendations', (req, res) => {
     `SELECT d.* FROM dishes d WHERE d.id NOT IN (SELECT DISTINCT dish_id FROM selections) LIMIT 5`
   ).all();
   res.json({ frequent: freq, recent, never });
+});
+
+app.get('/api/stats', (req, res) => {
+  const totals = {
+    dishes: db.prepare('SELECT COUNT(*) AS count FROM dishes').get().count,
+    selections: db.prepare('SELECT COUNT(*) AS count FROM selections').get().count,
+    users: db.prepare('SELECT COUNT(*) AS count FROM users').get().count
+  };
+  const top = db.prepare(
+    `SELECT d.name, d.image, d.category, COUNT(*) AS times
+     FROM selections s JOIN dishes d ON s.dish_id = d.id
+     GROUP BY s.dish_id ORDER BY times DESC, d.name LIMIT 5`
+  ).all();
+  const recentCount = db.prepare("SELECT COUNT(*) AS count FROM selections WHERE date >= date('now', '-6 days')").get().count;
+  res.json({ totals, top, recentCount });
 });
 
 // ---------- 投票 API ----------

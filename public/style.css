@@ -1551,3 +1551,54 @@ body { background: var(--bg); color: var(--text); }
 .celebration-particle:nth-child(3n + 2) { color: #718d75; }
 @keyframes celebrate-drop { 0% { opacity: 0; transform: translateY(-32px) rotate(0deg) scale(.5); } 18% { opacity: 1; } 100% { opacity: 0; transform: translateY(320px) rotate(var(--turn)) scale(1); } }
 @media (max-width: 640px) { .done-dish img { width: 76px; height: 76px; } .done-actions { flex-direction: column-reverse; } .done-actions > * { width: 100%; } }
+
+/* ---------- 快捷决策与餐桌反馈 ---------- */
+.quick-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: -2px 0 12px; }
+.quick-action, .done-utility-btn {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+.quick-action:hover, .quick-action.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.quick-action:active, .done-utility-btn:active { transform: translateY(1px); }
+.quick-action:focus-visible, .done-utility-btn:focus-visible, .menu-item:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 3px; }
+.pending-people { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-height: 28px; margin: -4px 0 16px; color: var(--text-secondary); font-size: 13px; }
+.pending-person { display: inline-flex; align-items: center; gap: 4px; color: var(--text); white-space: nowrap; }
+.pending-person b { display: inline-grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; color: #fff; font-size: 12px; font-weight: 500; }
+.pending-complete { color: #59745d; font-weight: 700; }
+.done-utility { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.done-utility-btn { width: 100%; background: transparent; }
+.done-utility-btn:hover { border-color: #93aa96; color: var(--text); background: #edf4ec; }
+.stats-content { min-height: 124px; margin: 18px 0 22px; }
+.stats-loading { color: var(--text-secondary); }
+.stats-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 22px; }
+.stats-overview div { min-width: 0; padding: 12px 8px; border-top: 2px solid var(--accent); background: #edf4ec; text-align: center; }
+.stats-overview strong, .stats-overview span { display: block; }
+.stats-overview strong { color: var(--text); font-family: var(--font-display); font-size: 24px; line-height: 1.1; }
+.stats-overview span { margin-top: 4px; color: var(--text-secondary); font-size: 12px; }
+.stats-content h4 { margin: 0 0 8px; color: var(--text); font-size: 15px; }
+.stats-top { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+.stats-top li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 2px; border-bottom: 1px solid var(--border); color: var(--text); }
+.stats-top b { color: var(--accent); font-size: 13px; white-space: nowrap; }
+.shortcut-list { display: grid; gap: 1px; margin: 18px 0 22px; border-top: 1px solid var(--border); }
+.shortcut-list div { display: flex; align-items: center; gap: 12px; min-height: 48px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+.shortcut-list kbd { display: inline-grid; min-width: 34px; height: 26px; place-items: center; padding: 0 6px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--card); color: var(--text); font-family: inherit; font-size: 12px; font-weight: 700; }
+[data-theme="dark"] .stats-overview div, [data-theme="dark"] .done-utility-btn:hover { background: #314238; }
+
+@media (max-width: 640px) {
+  .quick-actions { margin-bottom: 10px; }
+  .quick-action { flex: 1 1 0; padding: 0 8px; font-size: 12px; }
+  .pending-people { margin-bottom: 14px; }
+  .done-utility { grid-template-columns: 1fr; }
+  .stats-overview strong { font-size: 21px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-action, .done-utility-btn { transition: none; }
+}

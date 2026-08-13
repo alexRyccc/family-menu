@@ -16,13 +16,14 @@
     meAvatar: $('#meAvatar'), meName: $('#meName'), conn: $('#connDot'), stepBar: $('#stepBar'),
     search: $('#searchInput'), searchClear: $('#searchClear'), favorite: $('#chipFav'), adminList: $('#adminList'),
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
-    voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus')
+    voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), pendingPeople: $('#pendingPeople'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus'),
+    repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: 'lunch', date: today(), category: '全部', query: '', onlyFavorites: false, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null
   };
   let toastTimer;
   let lastFocus = null;
@@ -156,6 +157,10 @@
     let dishes = state.onlyFavorites ? state.dishes.filter(dish => state.favorites.has(dish.id)) : [...state.dishes];
     const frequentIds = new Set(state.recommendations.frequent.map(dish => dish.id));
     const neverIds = new Set(state.recommendations.never.map(dish => dish.id));
+    if (state.avoidRecent) {
+      const recentIds = new Set(state.recommendations.recent || []);
+      dishes = dishes.filter(dish => !recentIds.has(dish.id));
+    }
     if (state.dishMode === 'smart') dishes.sort((a, b) => Number(state.favorites.has(b.id)) - Number(state.favorites.has(a.id)) || Number(frequentIds.has(b.id)) - Number(frequentIds.has(a.id)) || b.id - a.id);
     if (state.dishMode === 'frequent') dishes.sort((a, b) => Number(frequentIds.has(b.id)) - Number(frequentIds.has(a.id)) || b.id - a.id);
     if (state.dishMode === 'new') dishes.sort((a, b) => Number(neverIds.has(b.id)) - Number(neverIds.has(a.id)) || b.id - a.id);
@@ -183,6 +188,11 @@
     state.plan.forEach(item => groups[item.meal]?.push(item));
     dom.planProgress.textContent = `已安排 ${state.plan.length} 份餐点`;
     renderTableNote();
+    const chosenIds = new Set(state.plan.filter(item => item.meal === state.meal).map(item => item.user_id));
+    const waiting = state.users.filter(user => !chosenIds.has(user.id));
+    dom.pendingPeople.innerHTML = waiting.length
+      ? `<span>本餐还差</span>${waiting.map(user => `<span class="pending-person" title="${esc(user.name)}"><b style="background:${esc(user.color)}">${esc(user.avatar)}</b>${esc(user.name)}</span>`).join('')}`
+      : '<span class="pending-complete">本餐大家都选好了</span>';
     if (!groups.lunch.length && !groups.dinner.length) {
       dom.summary.innerHTML = `<div class="today-row empty">${state.date === today() ? '今天' : dateLabel(state.date)}还没有安排，先选一道吧。</div>`;
       return;
@@ -239,8 +249,20 @@
     renderDishes();
   }
 
+  async function loadRecentSelection() {
+    if (!state.me) {
+      state.recentSelection = null;
+      dom.repeatLast.classList.add('hidden');
+      return;
+    }
+    state.recentSelection = await api(`/api/recent-selection?user_id=${state.me.id}&meal=${state.meal}&date=${state.date}`);
+    const hasRecent = Boolean(state.recentSelection && state.recentSelection.dish_id);
+    dom.repeatLast.classList.toggle('hidden', !hasRecent);
+    if (hasRecent) dom.repeatLast.textContent = `上次同款：${state.recentSelection.dish_name}`;
+  }
+
   async function loadFeed() { state.feed = await api('/api/notifications?limit=30'); renderFeed(); }
-  async function refreshDashboard() { await Promise.all([loadPlan(), loadSelections(), loadFavorites(), loadFeed()]); }
+  async function refreshDashboard() { await Promise.all([loadPlan(), loadSelections(), loadFavorites(), loadFeed(), loadRecentSelection()]); }
 
   function chooseUser(user) {
     state.me = { id: user.id, name: user.name, avatar: user.avatar, color: user.color };
@@ -279,6 +301,34 @@
     } catch (error) { if (error.name !== 'AbortError') toast('分享暂未完成。', 'error'); }
   }
 
+  async function repeatLastChoice() {
+    if (!state.recentSelection?.dish_id) return toast('还没有可重复的点餐记录');
+    if (!state.dishes.some(dish => dish.id === state.recentSelection.dish_id)) {
+      state.category = '全部';
+      state.query = '';
+      await loadDishes();
+    }
+    return chooseDish(state.recentSelection.dish_id);
+  }
+
+  async function undoSelection() {
+    if (!state.me) return;
+    const result = await api(`/api/select?user_id=${state.me.id}&meal=${state.meal}&date=${state.date}`, { method: 'DELETE' });
+    if (!result.changed) return toast('这餐还没有你的选择');
+    setStep(3);
+    await refreshDashboard();
+    toast('已撤销，可以重新选一道', 'success');
+  }
+
+  async function notifyFamily() {
+    if (!state.me) return;
+    const selected = state.selections[state.meal];
+    const dishName = selected?.dish_name || $('#doneDish .done-dish-name')?.textContent;
+    if (!dishName) return toast('请先选择一道菜', 'error');
+    await api('/api/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id, message: `${state.me.name} 已选好${mealName(state.meal)}：${dishName}，大家来看看吧。` }) });
+    toast('已提醒家人', 'success');
+  }
+
   async function toggleFavorite(id) {
     if (!state.me) return toast('请先选择家人', 'error');
     const exists = state.favorites.has(id);
@@ -314,12 +364,35 @@
 
   async function showWeekly() {
     const data = await api('/api/weekly');
+    state.weeklyData = data;
     const grouped = data.list.reduce((all, item) => ((all[item.date] ||= []).push(item), all), {});
     dom.weekly.innerHTML = data.week.map(date => {
       const meals = { lunch: [], dinner: [] };
       (grouped[date] || []).forEach(item => meals[item.meal]?.push(item));
       return `<section class="weekly-day ${date === today() ? 'today' : ''}"><h4>${dateLabel(date)}</h4>${['lunch', 'dinner'].map(meal => `<div class="weekly-meal"><strong>${meal === 'lunch' ? '中饭' : '晚饭'}</strong><span>${meals[meal].map(item => `${esc(item.user_avatar)} ${esc(item.dish_name)}`).join('、') || '暂无安排'}</span><button class="weekly-plan" data-plan-date="${date}" data-plan-meal="${meal}">安排</button></div>`).join('')}</section>`;
     }).join('');
+  }
+
+  async function copyWeekly() {
+    if (!state.weeklyData) await showWeekly();
+    const data = state.weeklyData;
+    const grouped = data.list.reduce((all, item) => ((all[item.date] ||= []).push(item), all), {});
+    const text = data.week.map(date => {
+      const rows = grouped[date] || [];
+      const lunch = rows.filter(item => item.meal === 'lunch').map(item => `${item.user_name} ${item.dish_name}`).join('、') || '未安排';
+      const dinner = rows.filter(item => item.meal === 'dinner').map(item => `${item.user_name} ${item.dish_name}`).join('、') || '未安排';
+      return `${dateLabel(date)}\n中饭：${lunch}\n晚饭：${dinner}`;
+    }).join('\n\n');
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+    else window.prompt('复制餐单', text);
+    toast('一周餐单已复制', 'success');
+  }
+
+  async function showStats() {
+    dom.stats.innerHTML = '<p class="stats-loading">正在整理餐桌数据...</p>';
+    openModal('statsModal');
+    const data = await api('/api/stats');
+    dom.stats.innerHTML = `<div class="stats-overview"><div><strong>${data.totals.dishes}</strong><span>道菜</span></div><div><strong>${data.totals.selections}</strong><span>次选择</span></div><div><strong>${data.recentCount}</strong><span>近七天</span></div></div><h4>大家常点</h4>${data.top.length ? `<ol class="stats-top">${data.top.map(item => `<li><span>${esc(item.name)}</span><b>${item.times} 次</b></li>`).join('')}</ol>` : '<p class="feed-empty">还没有足够记录，先点一顿吧。</p>'}`;
   }
 
   async function showVotes() {
@@ -393,17 +466,24 @@
       if (button.id === 'menuWeekly') { closeModal('moreMenu'); await showWeekly(); return openModal('weeklyModal'); }
       if (button.id === 'menuVotes') { closeModal('moreMenu'); await showVotes(); return openModal('votesModal'); }
       if (button.id === 'menuNotify') { closeModal('moreMenu'); await showNotify(); return openModal('notifyModal'); }
+      if (button.id === 'menuStats') { closeModal('moreMenu'); return showStats(); }
+      if (button.id === 'menuShortcuts') { closeModal('moreMenu'); return openModal('shortcutsModal'); }
       if (button.id === 'btnCreateVote') return createVote();
       if (button.id === 'btnRefreshWeekly') return showWeekly();
+      if (button.id === 'btnCopyWeekly') return copyWeekly();
       if (button.id === 'chipFav') { state.onlyFavorites = !state.onlyFavorites; button.classList.toggle('active', state.onlyFavorites); return renderDishes(); }
+      if (button.id === 'btnRepeatLast') return repeatLastChoice();
+      if (button.id === 'btnAvoidRepeat') { state.avoidRecent = !state.avoidRecent; button.classList.toggle('active', state.avoidRecent); button.setAttribute('aria-pressed', String(state.avoidRecent)); return renderDishes(); }
       if (button.id === 'searchClear') { dom.search.value = ''; state.query = ''; button.classList.add('hidden'); return loadDishes(); }
       if (button.id === 'btnWhoRetry') return initialize();
       if (button.id === 'btnDishRetry') return loadDishes();
       if (button.id === 'btnAddFromEmpty') return openModal('adminModal');
       if (button.id === 'btnDoneBack') return setStep(3);
       if (button.id === 'btnDoneOk') return setStep(3);
+      if (button.id === 'btnUndoSelection') return undoSelection();
+      if (button.id === 'btnNotifyFamily') return notifyFamily();
       if (button.id === 'btnShareSelection') return shareSelection();
-      if (button.id === 'btnShake') { state.shakeDish = state.dishes[Math.floor(Math.random() * state.dishes.length)]; if (!state.shakeDish) return; $('#shakeResult').textContent = '正在挑选...'; $('#btnShakeAgain').disabled = true; $('#btnShakeClose').disabled = false; openModal('shakeModal'); setTimeout(() => { $('#shakeResult').innerHTML = `<strong>${esc(state.shakeDish.name)}</strong><p>${esc(state.shakeDish.category)}</p>`; $('#btnShakeAgain').disabled = false; }, 500); return; }
+      if (button.id === 'btnShake') { const recentIds = state.avoidRecent ? new Set(state.recommendations.recent || []) : new Set(); const candidates = state.dishes.filter(dish => dish.id !== state.selections[state.meal]?.dish_id && !recentIds.has(dish.id)); state.shakeDish = candidates[Math.floor(Math.random() * candidates.length)] || state.dishes[0]; if (!state.shakeDish) return; $('#shakeResult').textContent = '正在挑选...'; $('#btnShakeAgain').disabled = true; $('#btnShakeClose').disabled = false; openModal('shakeModal'); setTimeout(() => { $('#shakeResult').innerHTML = `<strong>${esc(state.shakeDish.name)}</strong><p>${esc(state.shakeDish.category)}</p>`; $('#btnShakeAgain').disabled = false; }, 500); return; }
       if (button.id === 'btnShakeAgain' && state.shakeDish) { closeModal('shakeModal'); return chooseDish(state.shakeDish.id); }
       if (button.id === 'btnShakeClose') return closeModal('shakeModal');
       if (button.id === 'btnAddTarget') { await api('/api/notify/targets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('#ntName').value, email: $('#ntEmail').value, phone: $('#ntPhone').value }) }); ['#ntName', '#ntEmail', '#ntPhone'].forEach(id => { $(id).value = ''; }); return showNotify(); }
@@ -414,18 +494,24 @@
   });
 
   dom.search.addEventListener('input', () => { state.query = dom.search.value.trim(); dom.searchClear.classList.toggle('hidden', !state.query); clearTimeout(dom.search.timer); dom.search.timer = setTimeout(() => loadDishes().catch(error => toast(error.message, 'error')), 250); });
-  $$('.meal-card').forEach(card => card.addEventListener('click', () => { state.meal = card.dataset.meal; setStep(3); loadDishes().catch(error => toast(error.message, 'error')); }));
+  $$('.meal-card').forEach(card => card.addEventListener('click', () => { state.meal = card.dataset.meal; localStorage.setItem('fm_last_meal', state.meal); setStep(3); Promise.all([loadDishes(), loadRecentSelection()]).catch(error => toast(error.message, 'error')); }));
   document.addEventListener('keydown', event => {
     if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { event.preventDefault(); dom.search.focus(); return; }
     const modal = $('.modal-overlay:not(.hidden)');
     if (event.key === 'Escape' && modal) return closeModal(modal.id);
-    if (event.key !== 'Tab' || !modal) return;
-    const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')];
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable.at(-1);
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    if (event.key === 'Tab' && modal) {
+      const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')];
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      return;
+    }
+    if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || modal) return;
+    if (event.key.toLowerCase() === 'r' && !$('#step3').classList.contains('hidden')) { event.preventDefault(); repeatLastChoice().catch(error => toast(error.message, 'error')); return; }
+    if (event.key.toLowerCase() === 'n' && !$('#step3').classList.contains('hidden')) { event.preventDefault(); dom.avoidRepeat.click(); return; }
+    if (event.key === '?') { event.preventDefault(); openModal('shortcutsModal'); }
   });
   $$('.modal-overlay').forEach(overlay => overlay.addEventListener('click', event => { if (event.target === overlay) closeModal(overlay.id); }));
 
