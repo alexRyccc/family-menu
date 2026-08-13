@@ -173,6 +173,57 @@ function cleanCategory(value) {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, 30) : '家常菜';
 }
 
+const RECIPE_LIBRARY = {
+  '红烧肉': {
+    duration: '55 分钟', difficulty: '家常', ingredients: [['五花肉', '500g'], ['冰糖', '20g'], ['生抽', '2 汤匙'], ['老抽', '1 汤匙'], ['葱姜', '适量']],
+    steps: ['五花肉切 3 厘米块，冷水下锅，煮出浮沫后洗净。', '锅中放少许油，小火将冰糖炒至琥珀色。', '倒入五花肉翻匀上色，加入葱姜、生抽和老抽。', '加热水没过肉块，小火加盖焖 40 分钟。', '开盖转大火收汁，尝味后装盘。'], tip: '全程用热水炖，肉会更软糯。'
+  },
+  '番茄炒蛋': {
+    duration: '12 分钟', difficulty: '入门', ingredients: [['番茄', '2 个'], ['鸡蛋', '3 个'], ['葱花', '少许'], ['盐', '适量'], ['糖', '1 小勺']],
+    steps: ['番茄切块，鸡蛋加少许盐打散。', '热锅热油，倒入蛋液，炒至刚凝固后盛出。', '原锅放番茄，中火炒出汁水。', '加入盐和糖调味，倒回鸡蛋快速翻匀。', '撒葱花，关火出锅。'], tip: '鸡蛋不要炒老，最后回锅 20 秒就够。'
+  },
+  '麻婆豆腐': {
+    duration: '20 分钟', difficulty: '家常', ingredients: [['嫩豆腐', '1 盒'], ['牛肉末', '100g'], ['郫县豆瓣酱', '1 汤匙'], ['花椒粉', '少许'], ['蒜末', '1 汤匙']],
+    steps: ['豆腐切小方块，入淡盐水中焯 1 分钟后沥干。', '热锅下油，炒香牛肉末和蒜末。', '加入豆瓣酱炒出红油，倒入半碗清水煮开。', '轻推入豆腐，小火煮 5 分钟使其入味。', '淋水淀粉收汁，撒花椒粉和葱花。'], tip: '用推的方式翻动豆腐，不易碎。'
+  },
+  '可乐鸡翅': {
+    duration: '30 分钟', difficulty: '家常', ingredients: [['鸡翅中', '10 个'], ['可乐', '330ml'], ['生抽', '2 汤匙'], ['姜片', '3 片'], ['白芝麻', '少许']],
+    steps: ['鸡翅两面划口，冷水下锅焯去血沫并擦干。', '锅中少油，将鸡翅煎至两面金黄。', '放入姜片、生抽和可乐，大火煮开。', '转中小火焖 15 分钟，期间翻面一次。', '大火收至酱汁浓亮，撒芝麻。'], tip: '可乐本身有甜味，通常不用额外加糖。'
+  },
+  '清蒸鲈鱼': {
+    duration: '18 分钟', difficulty: '家常', ingredients: [['鲈鱼', '1 条'], ['姜丝', '适量'], ['葱丝', '适量'], ['蒸鱼豉油', '2 汤匙'], ['热油', '2 汤匙']],
+    steps: ['鱼处理干净，在鱼身两侧划刀，放姜片腌 5 分钟。', '水开后上锅，大火蒸 8 至 10 分钟。', '取出倒掉盘中腥水，换上新鲜葱姜丝。', '淋蒸鱼豉油。', '烧热食用油，浇在葱姜丝上即可。'], tip: '蒸鱼时间从水开后开始计算，过久肉会发柴。'
+  },
+  '蒜蓉粉丝蒸虾': {
+    duration: '22 分钟', difficulty: '家常', ingredients: [['鲜虾', '12 只'], ['粉丝', '1 把'], ['蒜', '1 头'], ['生抽', '2 汤匙'], ['小米椒', '可选']],
+    steps: ['粉丝温水泡软，铺在盘底；鲜虾开背去虾线。', '蒜末用少许油炒香，加生抽和少许清水调成蒜蓉汁。', '将虾摆在粉丝上，均匀铺上蒜蓉汁。', '水开后上锅蒸 6 分钟。', '出锅撒葱花，喜欢辣味可加小米椒。'], tip: '虾开背后更容易入味，也更好剥。'
+  },
+  '油焖大虾': {
+    duration: '25 分钟', difficulty: '家常', ingredients: [['大虾', '500g'], ['葱姜', '适量'], ['番茄酱', '1 汤匙'], ['生抽', '1 汤匙'], ['糖', '1 小勺']],
+    steps: ['大虾剪去虾枪和虾须，挑出虾线并擦干。', '锅中油热后煎虾，压出虾头红油。', '放葱姜、番茄酱、生抽和糖炒匀。', '加少量热水，盖盖焖 5 分钟。', '开盖收浓汤汁，翻匀即可。'], tip: '煎虾前擦干水分，锅里不容易溅油。'
+  },
+  '白灼虾': {
+    duration: '10 分钟', difficulty: '入门', ingredients: [['鲜虾', '500g'], ['姜片', '3 片'], ['葱段', '适量'], ['料酒', '1 汤匙'], ['蘸料', '按喜好']],
+    steps: ['鲜虾洗净，剪去长须。', '锅中加水、姜片、葱段和料酒，煮至沸腾。', '倒入鲜虾，水再次沸腾后煮 1 至 2 分钟。', '虾身变红卷曲后立刻捞出。', '配姜醋或生抽蘸料食用。'], tip: '不要久煮，虾肉刚变白弹牙时最好吃。'
+  }
+};
+
+function fallbackRecipe(dish) {
+  const category = dish.category || '家常菜';
+  const profiles = {
+    '火锅': { duration: '25 分钟', difficulty: '入门', ingredients: [['火锅底料', '1 份'], ['高汤或清水', '适量'], ['喜欢的肉菜', '适量'], ['蘸料', '按喜好']], steps: ['准备肉类、蔬菜和主食，分别洗净切好。', '锅中加入底料和高汤，煮开后先尝汤底咸淡。', '耐煮食材先下锅，肉片和叶菜分批涮熟。', '按食材熟度依次捞出，搭配蘸料食用。'] },
+    '汤羹': { duration: '40 分钟', difficulty: '家常', ingredients: [[dish.name, '1 份'], ['主食材', '适量'], ['葱姜', '适量'], ['盐', '适量']], steps: ['将主食材洗净切成均匀小块。', '锅中少油炒香葱姜和主食材。', '加入热水，大火煮开后转小火慢煮。', '食材软熟后调盐，静置 2 分钟再盛出。'] },
+    '面食': { duration: '25 分钟', difficulty: '家常', ingredients: [[dish.name, '1 份'], ['面条或面皮', '1 人份'], ['配菜', '适量'], ['调味料', '适量']], steps: ['准备好主料和配菜，调好一碗基础酱汁。', '烧开足量水，将面条煮至比喜欢的口感略硬一点。', '另起锅炒香配菜和主料。', '倒入面条或面皮，大火翻匀调味后出锅。'] }
+  };
+  const profile = profiles[category] || { duration: '30 分钟', difficulty: '家常', ingredients: [[dish.name, '1 份'], ['主食材', '适量'], ['葱姜蒜', '适量'], ['盐和基础调味', '适量']], steps: ['将食材洗净，按入口大小切配。', '热锅后下油，先将主食材煎或炒至变色。', '加入葱姜蒜和调味料，翻炒均匀。', '根据食材状态加少量热水，焖至熟透。', '开盖收汁，尝味后盛盘。'] };
+  return { ...profile, tip: `这是 ${category} 的基础做法，可按家里口味调整咸淡和火候。`, source: 'basic' };
+}
+
+function recipeForDish(dish) {
+  const recipe = RECIPE_LIBRARY[dish.name] || fallbackRecipe(dish);
+  return { dish_id: dish.id, dish_name: dish.name, category: dish.category, ...recipe, source: RECIPE_LIBRARY[dish.name] ? 'curated' : recipe.source };
+}
+
 function isPrivateIp(address) {
   if (net.isIP(address) === 4) {
     const [a, b] = address.split('.').map(Number);
@@ -289,6 +340,14 @@ app.get('/api/dishes', (req, res) => {
   if (conds.length) sql += ' WHERE ' + conds.join(' AND ');
   sql += ' ORDER BY id DESC';
   res.json(db.prepare(sql).all(...params));
+});
+
+app.get('/api/dishes/:id/recipe', (req, res) => {
+  const dishId = positiveInt(req.params.id);
+  if (!dishId) return res.status(400).json({ error: '菜品编号无效' });
+  const dish = db.prepare('SELECT id, name, category FROM dishes WHERE id = ?').get(dishId);
+  if (!dish) return res.status(404).json({ error: '菜品不存在' });
+  res.json(recipeForDish(dish));
 });
 
 app.post('/api/dishes', upload.single('image'), async (req, res, next) => {

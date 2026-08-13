@@ -130,6 +130,7 @@
           <button id="btnUndoSelection" class="done-utility-btn" type="button">撤销这次选择</button>
           <button id="btnNotifyFamily" class="done-utility-btn" type="button">提醒家人来看</button>
         </div>
+        <button id="btnCookSelected" class="done-cook" type="button">查看食谱，开始制作</button>
         <button id="btnShareSelection" class="done-share" type="button">分享这份餐单</button>
       </div>
     </section>
@@ -348,6 +349,32 @@
         <div><kbd>Esc</kbd><span>关闭当前窗口</span></div>
       </div>
       <div class="btn-row"><button class="btn-primary" data-close="shortcutsModal">知道了</button></div>
+    </div>
+  </div>
+
+  <div id="recipeModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="recipeTitle">
+    <div class="modal recipe-modal">
+      <div class="recipe-heading">
+        <div>
+          <p id="recipeEyebrow" class="recipe-eyebrow"></p>
+          <h3 id="recipeTitle">食谱</h3>
+        </div>
+        <button class="recipe-close" type="button" data-close="recipeModal" aria-label="关闭食谱">×</button>
+      </div>
+      <div id="recipeMeta" class="recipe-meta"></div>
+      <section class="recipe-section" aria-labelledby="recipeIngredientsTitle">
+        <h4 id="recipeIngredientsTitle">准备食材</h4>
+        <ul id="recipeIngredients" class="recipe-ingredients"></ul>
+      </section>
+      <section class="recipe-section" aria-labelledby="recipeStepsTitle">
+        <div class="recipe-steps-heading"><h4 id="recipeStepsTitle">开始制作</h4><span id="recipeProgress" aria-live="polite"></span></div>
+        <ol id="recipeSteps" class="recipe-steps"></ol>
+      </section>
+      <p id="recipeTip" class="recipe-tip"></p>
+      <div class="btn-row recipe-actions">
+        <button class="btn-secondary" id="btnResetRecipe" type="button">重新开始</button>
+        <button class="btn-primary" data-close="recipeModal" type="button">完成制作</button>
+      </div>
     </div>
   </div>
 
