@@ -17,13 +17,13 @@
     search: $('#searchInput'), searchClear: $('#searchClear'), favorite: $('#chipFav'), adminList: $('#adminList'),
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
     voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), pendingPeople: $('#pendingPeople'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus'),
-    repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip')
+    repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null
   };
   let toastTimer;
   let lastFocus = null;
@@ -330,6 +330,13 @@
   }
 
   function recipeStorageKey(recipe) { return `fm_recipe_${recipe.dish_id}`; }
+  function recipeIngredientKey(recipe) { return `fm_recipe_ingredients_${recipe.dish_id}`; }
+  function scaledAmount(amount) {
+    const match = String(amount).match(/^(\d+(?:\.\d+)?)(.*)$/);
+    if (!match) return amount;
+    const value = Number(match[1]) * state.servings / 2;
+    return `${Number.isInteger(value) ? value : value.toFixed(1)}${match[2]}`;
+  }
 
   function saveRecipeProgress() {
     if (state.recipe) localStorage.setItem(recipeStorageKey(state.recipe), JSON.stringify([...state.recipeDone]));
@@ -341,11 +348,16 @@
     dom.recipeEyebrow.textContent = `${recipe.category} · ${recipe.source === 'curated' ? '家常做法' : '基础流程'}`;
     dom.recipeTitle.textContent = recipe.dish_name;
     dom.recipeMeta.innerHTML = `<span>${esc(recipe.duration)}</span><span>${esc(recipe.difficulty)}</span><span>${recipe.steps.length} 个步骤</span>`;
-    dom.recipeIngredients.innerHTML = recipe.ingredients.map(([name, amount]) => `<li><span>${esc(name)}</span><b>${esc(amount)}</b></li>`).join('');
+    dom.recipeServings.textContent = `${state.servings} 人`;
+    dom.recipeIngredients.innerHTML = recipe.ingredients.map(([name, amount], index) => {
+      const done = state.ingredientDone.has(index);
+      return `<li class="recipe-ingredient ${done ? 'done' : ''}"><label><input type="checkbox" data-ingredient-index="${index}" ${done ? 'checked' : ''}><span>${esc(name)}</span></label><b>${esc(scaledAmount(amount))}</b></li>`;
+    }).join('');
     dom.recipeSteps.innerHTML = recipe.steps.map((step, index) => {
       const done = state.recipeDone.has(index);
       return `<li class="recipe-step ${done ? 'done' : ''}"><label><input type="checkbox" data-recipe-step="${index}" ${done ? 'checked' : ''}><span class="recipe-step-index">${index + 1}</span><span>${esc(step)}</span></label></li>`;
     }).join('');
+    dom.ingredientProgress.textContent = `${state.ingredientDone.size} / ${recipe.ingredients.length} 已备齐`;
     dom.recipeProgress.textContent = `${state.recipeDone.size} / ${recipe.steps.length} 已完成`;
     dom.recipeTip.textContent = `小提示：${recipe.tip}`;
   }
@@ -357,20 +369,74 @@
     dom.recipeIngredients.replaceChildren();
     dom.recipeSteps.replaceChildren();
     dom.recipeProgress.textContent = '';
+    dom.ingredientProgress.textContent = '';
     dom.recipeTip.textContent = '';
     openModal('recipeModal');
     const recipe = await api(`/api/dishes/${dishId}/recipe`);
     state.recipe = recipe;
+    state.servings = Number(localStorage.getItem(`fm_recipe_servings_${recipe.dish_id}`)) || 2;
     try { state.recipeDone = new Set(JSON.parse(localStorage.getItem(recipeStorageKey(recipe)) || '[]').filter(step => Number.isInteger(step) && step >= 0 && step < recipe.steps.length)); }
     catch (_) { state.recipeDone = new Set(); }
+    try { state.ingredientDone = new Set(JSON.parse(localStorage.getItem(recipeIngredientKey(recipe)) || '[]').filter(index => Number.isInteger(index) && index >= 0 && index < recipe.ingredients.length)); }
+    catch (_) { state.ingredientDone = new Set(); }
     renderRecipe();
   }
 
   function resetRecipe() {
     if (!state.recipe) return;
     state.recipeDone = new Set();
+    state.ingredientDone = new Set();
     localStorage.removeItem(recipeStorageKey(state.recipe));
+    localStorage.removeItem(recipeIngredientKey(state.recipe));
     renderRecipe();
+  }
+
+  async function copyShoppingList() {
+    if (!state.recipe) return;
+    const list = state.recipe.ingredients.map(([name, amount]) => `- ${name} ${scaledAmount(amount)}`).join('\n');
+    const text = `${state.recipe.dish_name}（${state.servings} 人）\n${list}`;
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+    else window.prompt('复制购物清单', text);
+    toast('食材清单已复制', 'success');
+  }
+
+  function updateServings(change) {
+    if (!state.recipe) return;
+    state.servings = Math.max(1, Math.min(8, state.servings + change));
+    localStorage.setItem(`fm_recipe_servings_${state.recipe.dish_id}`, String(state.servings));
+    renderRecipe();
+  }
+
+  function finishNextRecipeStep() {
+    if (!state.recipe) return;
+    const next = state.recipe.steps.findIndex((_, index) => !state.recipeDone.has(index));
+    if (next === -1) return toast('全部步骤已经完成了', 'success');
+    state.recipeDone.add(next);
+    saveRecipeProgress();
+    renderRecipe();
+    document.querySelector(`[data-recipe-step="${next}"]`)?.closest('.recipe-step')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (state.recipeDone.size === state.recipe.steps.length) toast('这道菜完成啦，开饭！', 'success');
+  }
+
+  function renderRecipeTimer() {
+    const remaining = Math.max(0, Math.ceil((state.timerEndsAt - Date.now()) / 1000));
+    if (!state.timerEndsAt || remaining <= 0) {
+      clearInterval(state.timerInterval);
+      state.timerInterval = null;
+      dom.recipeTimer.textContent = state.timerEndsAt ? '计时完成，可以查看下一步' : '计时器未开始';
+      $('#btnStartTimer').textContent = state.timerEndsAt ? '再计 5 分钟' : '开始计时';
+      if (state.timerEndsAt) { state.timerEndsAt = null; toast('5 分钟计时完成', 'success'); }
+      return;
+    }
+    dom.recipeTimer.textContent = `剩余 ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
+    $('#btnStartTimer').textContent = '计时中';
+  }
+
+  function startRecipeTimer() {
+    state.timerEndsAt = Date.now() + 5 * 60 * 1000;
+    clearInterval(state.timerInterval);
+    renderRecipeTimer();
+    state.timerInterval = setInterval(renderRecipeTimer, 1000);
   }
 
   async function toggleFavorite(id) {
@@ -530,6 +596,12 @@
       if (button.id === 'btnCookSelected') { const dishId = Number($('#btnDoneOk').dataset.dishId); if (!dishId) return toast('请先选择一道菜', 'error'); return openRecipe(dishId); }
       if (button.id === 'btnShareSelection') return shareSelection();
       if (button.id === 'btnResetRecipe') return resetRecipe();
+      if (button.id === 'btnServingsDown') return updateServings(-1);
+      if (button.id === 'btnServingsUp') return updateServings(1);
+      if (button.id === 'btnCopyShopping') return copyShoppingList();
+      if (button.id === 'btnNextRecipeStep') return finishNextRecipeStep();
+      if (button.id === 'btnStartTimer') return startRecipeTimer();
+      if (button.id === 'btnKitchenMode') { document.body.classList.toggle('kitchen-mode'); button.setAttribute('aria-pressed', String(document.body.classList.contains('kitchen-mode'))); return; }
       if (button.id === 'btnShake') { const recentIds = state.avoidRecent ? new Set(state.recommendations.recent || []) : new Set(); const candidates = state.dishes.filter(dish => dish.id !== state.selections[state.meal]?.dish_id && !recentIds.has(dish.id)); state.shakeDish = candidates[Math.floor(Math.random() * candidates.length)] || state.dishes[0]; if (!state.shakeDish) return; $('#shakeResult').textContent = '正在挑选...'; $('#btnShakeAgain').disabled = true; $('#btnShakeClose').disabled = false; openModal('shakeModal'); setTimeout(() => { $('#shakeResult').innerHTML = `<strong>${esc(state.shakeDish.name)}</strong><p>${esc(state.shakeDish.category)}</p>`; $('#btnShakeAgain').disabled = false; }, 500); return; }
       if (button.id === 'btnShakeAgain' && state.shakeDish) { closeModal('shakeModal'); return chooseDish(state.shakeDish.id); }
       if (button.id === 'btnShakeClose') return closeModal('shakeModal');
@@ -542,6 +614,15 @@
 
   dom.search.addEventListener('input', () => { state.query = dom.search.value.trim(); dom.searchClear.classList.toggle('hidden', !state.query); clearTimeout(dom.search.timer); dom.search.timer = setTimeout(() => loadDishes().catch(error => toast(error.message, 'error')), 250); });
   document.addEventListener('change', event => {
+    const ingredient = event.target.closest('input[data-ingredient-index]');
+    if (ingredient && state.recipe) {
+      const index = Number(ingredient.dataset.ingredientIndex);
+      if (ingredient.checked) state.ingredientDone.add(index);
+      else state.ingredientDone.delete(index);
+      localStorage.setItem(recipeIngredientKey(state.recipe), JSON.stringify([...state.ingredientDone]));
+      renderRecipe();
+      return;
+    }
     const step = event.target.closest('input[data-recipe-step]');
     if (!step || !state.recipe) return;
     const index = Number(step.dataset.recipeStep);

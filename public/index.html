@@ -362,8 +362,17 @@
         <button class="recipe-close" type="button" data-close="recipeModal" aria-label="关闭食谱">×</button>
       </div>
       <div id="recipeMeta" class="recipe-meta"></div>
+      <div class="recipe-tools" aria-label="食谱工具">
+        <div class="servings-control" aria-label="用餐份量">
+          <span>份量</span>
+          <button id="btnServingsDown" type="button" aria-label="减少一份">−</button>
+          <strong id="recipeServings">2 人</strong>
+          <button id="btnServingsUp" type="button" aria-label="增加一份">+</button>
+        </div>
+        <button id="btnCopyShopping" class="recipe-tool" type="button">复制清单</button>
+      </div>
       <section class="recipe-section" aria-labelledby="recipeIngredientsTitle">
-        <h4 id="recipeIngredientsTitle">准备食材</h4>
+        <div class="recipe-steps-heading"><h4 id="recipeIngredientsTitle">准备食材</h4><span id="ingredientProgress" aria-live="polite"></span></div>
         <ul id="recipeIngredients" class="recipe-ingredients"></ul>
       </section>
       <section class="recipe-section" aria-labelledby="recipeStepsTitle">
@@ -371,6 +380,11 @@
         <ol id="recipeSteps" class="recipe-steps"></ol>
       </section>
       <p id="recipeTip" class="recipe-tip"></p>
+      <div class="recipe-kitchen-tools">
+        <button id="btnNextRecipeStep" class="recipe-tool" type="button">完成下一步</button>
+        <div class="recipe-timer" aria-live="polite"><span id="recipeTimer">计时器未开始</span><button id="btnStartTimer" class="recipe-tool" type="button">开始计时</button></div>
+        <button id="btnKitchenMode" class="recipe-tool" type="button">厨房模式</button>
+      </div>
       <div class="btn-row recipe-actions">
         <button class="btn-secondary" id="btnResetRecipe" type="button">重新开始</button>
         <button class="btn-primary" data-close="recipeModal" type="button">完成制作</button>
