@@ -19,7 +19,8 @@
     voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), pendingPeople: $('#pendingPeople'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus'),
     repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
     notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'),
-    petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus')
+    petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus'),
+    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
@@ -28,7 +29,7 @@
   };
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', notes: [], noteFilter: '', justAddedNoteId: null, pets: [], petRecords: [], petFilter: 'all'
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', justAddedNoteId: null, pets: [], petRecords: [], petFilter: 'all', savedRecommendations: [], checkins: [], recommendationFilter: 'all', mapRecommendationId: null
   };
   let toastTimer;
   let lastFocus = null;
@@ -117,16 +118,20 @@
     document.body.classList.toggle('app-menu', view === 'menu');
     document.body.classList.toggle('app-notes', view === 'notes');
     document.body.classList.toggle('app-pets', view === 'pets');
+    document.body.classList.toggle('app-recommendations', view === 'recommendations');
     $('#homeScreen').classList.toggle('hidden', view !== 'home');
     $('#main').classList.toggle('hidden', view !== 'menu');
     dom.notesView.classList.toggle('hidden', view !== 'notes');
     dom.petsView.classList.toggle('hidden', view !== 'pets');
-    $('#topbarContext').textContent = view === 'notes' ? '猫家记事本' : view === 'pets' ? '猫咪清单' : '猫家点菜';
+    dom.recommendationsView.classList.toggle('hidden', view !== 'recommendations');
+    dom.stepBar.classList.toggle('hidden', view !== 'menu' || state.currentStep === 1);
+    $('#topbarContext').textContent = view === 'notes' ? '猫家记事本' : view === 'pets' ? '猫咪清单' : view === 'recommendations' ? '推荐清单' : '猫家点菜';
     if (view === 'notes') {
       renderNoteForm();
       loadSharedNotes().catch(error => toast(error.message, 'error'));
     }
     if (view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(error => toast(error.message, 'error'));
+    if (view === 'recommendations') loadRecommendationData().catch(error => toast(error.message, 'error'));
     window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
 
@@ -379,7 +384,158 @@
     }
   }
 
+  const recommendationTypes = {
+    place: { label: '地点', icon: '⌖' },
+    merchant: { label: '商家', icon: '◇' },
+    product: { label: '商品', icon: '□' }
+  };
+
+  function hasCoordinates(item) {
+    return Number.isFinite(Number(item?.latitude)) && Number.isFinite(Number(item?.longitude));
+  }
+
+  function locationText(item) {
+    return [item?.region, item?.address].filter(Boolean).join(' · ') || '未填写地点说明';
+  }
+
+  function mapEmbedUrl(item) {
+    if (!hasCoordinates(item)) return 'https://www.openstreetmap.org/export/embed.html?bbox=120.127%2C30.249%2C120.183%2C30.296&layer=mapnik';
+    const latitude = Number(item.latitude);
+    const longitude = Number(item.longitude);
+    const span = 0.012;
+    const bbox = [longitude - span, latitude - span, longitude + span, latitude + span].map(value => value.toFixed(6)).join('%2C');
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latitude.toFixed(6)}%2C${longitude.toFixed(6)}`;
+  }
+
+  function setMapTarget(item, label) {
+    state.mapRecommendationId = item?.id || null;
+    dom.recommendationMap.src = mapEmbedUrl(item);
+    dom.recommendationMapCaption.textContent = hasCoordinates(item) ? `${label || item.title} · ${locationText(item)}` : '还没有可查看的坐标，新增推荐或打卡时可免费获取当前位置。';
+  }
+
+  function renderRecommendationForms() {
+    const selectedAuthor = Number(dom.recommendationAuthor.value) || state.me?.id || state.users[0]?.id;
+    const checkinAuthor = Number(dom.checkinAuthor.value) || state.me?.id || state.users[0]?.id;
+    const authors = state.users.map(user => `<option value="${user.id}">${esc(user.avatar)} ${esc(user.name)}</option>`).join('') || '<option value="">未署名</option>';
+    dom.recommendationAuthor.innerHTML = authors;
+    dom.checkinAuthor.innerHTML = authors;
+    if (selectedAuthor && state.users.some(user => user.id === selectedAuthor)) dom.recommendationAuthor.value = String(selectedAuthor);
+    if (checkinAuthor && state.users.some(user => user.id === checkinAuthor)) dom.checkinAuthor.value = String(checkinAuthor);
+    const selectedRecommendation = Number(dom.checkinRecommendation.value);
+    dom.checkinRecommendation.innerHTML = '<option value="">独立打卡</option>' + state.savedRecommendations.map(item => `<option value="${item.id}">${esc(item.title)} · ${esc(recommendationTypes[item.kind]?.label || '推荐')}</option>`).join('');
+    if (selectedRecommendation && state.savedRecommendations.some(item => item.id === selectedRecommendation)) dom.checkinRecommendation.value = String(selectedRecommendation);
+  }
+
+  function renderRecommendations() {
+    const visible = state.recommendationFilter === 'all' ? state.savedRecommendations : state.savedRecommendations.filter(item => item.kind === state.recommendationFilter);
+    const located = state.savedRecommendations.filter(hasCoordinates).length;
+    dom.recommendationStats.textContent = `${state.savedRecommendations.length} 条推荐 · ${located} 个已定位`;
+    dom.recommendationList.innerHTML = visible.map(item => {
+      const type = recommendationTypes[item.kind] || recommendationTypes.place;
+      const mapButton = hasCoordinates(item) ? `<button type="button" data-show-recommendation="${item.id}">地图查看</button>` : '';
+      return `<article class="recommendation-card"><div class="recommendation-card-top"><span class="recommendation-kind recommendation-kind-${esc(item.kind)}">${type.icon} ${esc(type.label)}</span><time>${esc(String(item.created_at || '').slice(0, 10))}</time></div><h3>${esc(item.title)}</h3><p class="recommendation-location">${esc(locationText(item))}</p>${item.description ? `<p class="recommendation-description">${esc(item.description)}</p>` : ''}<div class="recommendation-card-footer"><small>${item.author_name ? `${esc(item.author_avatar || '')} ${esc(item.author_name)} 推荐` : '家人推荐'}${item.checkin_count ? ` · ${item.checkin_count} 次打卡` : ''}</small><div>${mapButton}<button type="button" data-checkin-recommendation="${item.id}">去打卡</button></div></div></article>`;
+    }).join('') || '<div class="notes-empty"><strong>还没有推荐</strong><span>把一家人觉得值得的地点、商家和商品先存下来。</span></div>';
+    const target = state.savedRecommendations.find(item => item.id === state.mapRecommendationId) || state.savedRecommendations.find(hasCoordinates);
+    setMapTarget(target, target?.title);
+  }
+
+  function renderCheckins() {
+    dom.checkinCount.textContent = `${state.checkins.length} 条永久记录`;
+    dom.checkinList.innerHTML = state.checkins.map(item => `<article class="checkin-entry"><div class="checkin-marker">●</div><div><div class="checkin-entry-top"><strong>${esc(item.recommendation_title || '独立打卡')}</strong><time>${esc(item.checkin_date)}</time></div><p>${esc(locationText(item))}</p>${item.note ? `<p class="checkin-note">${esc(item.note)}</p>` : ''}<small>${item.author_name ? `${esc(item.author_avatar || '')} ${esc(item.author_name)} 记录` : '家人记录'}</small></div><button type="button" data-show-checkin="${item.id}">地图</button></article>`).join('') || '<div class="notes-empty"><strong>还没有打卡记录</strong><span>到店、逛街或发现新地方时，记下一次真实体验。</span></div>';
+  }
+
+  async function loadRecommendationData() {
+    const [recommendations, checkins] = await Promise.all([api('/api/family-recommendations'), api('/api/family-checkins')]);
+    state.savedRecommendations = recommendations;
+    state.checkins = checkins;
+    renderRecommendationForms();
+    renderRecommendations();
+    renderCheckins();
+  }
+
+  function openRecommendationForm() {
+    renderRecommendationForms();
+    dom.recommendationTitle.value = '';
+    dom.recommendationKind.value = 'place';
+    dom.recommendationRegion.value = '';
+    dom.recommendationAddress.value = '';
+    dom.recommendationLatitude.value = '';
+    dom.recommendationLongitude.value = '';
+    dom.recommendationDescription.value = '';
+    dom.recommendationSaveStatus.textContent = '';
+    openModal('recommendationModal');
+  }
+
+  function fillCheckinFromRecommendation() {
+    const item = state.savedRecommendations.find(record => record.id === Number(dom.checkinRecommendation.value));
+    if (!item) return;
+    dom.checkinRegion.value = item.region || '';
+    dom.checkinAddress.value = item.address || '';
+    dom.checkinLatitude.value = hasCoordinates(item) ? item.latitude : '';
+    dom.checkinLongitude.value = hasCoordinates(item) ? item.longitude : '';
+  }
+
+  function openCheckinForm(recommendationId = null) {
+    renderRecommendationForms();
+    dom.checkinRecommendation.value = recommendationId ? String(recommendationId) : '';
+    dom.checkinDate.value = today();
+    dom.checkinRegion.value = '';
+    dom.checkinAddress.value = '';
+    dom.checkinLatitude.value = '';
+    dom.checkinLongitude.value = '';
+    dom.checkinNote.value = '';
+    dom.checkinSaveStatus.textContent = '';
+    if (recommendationId) fillCheckinFromRecommendation();
+    openModal('checkinModal');
+  }
+
+  function useCurrentLocation(prefix) {
+    if (!navigator.geolocation) return toast('当前浏览器不支持定位，请手动填写地区和坐标', 'error');
+    const fields = prefix === 'checkin'
+      ? { latitude: dom.checkinLatitude, longitude: dom.checkinLongitude }
+      : { latitude: dom.recommendationLatitude, longitude: dom.recommendationLongitude };
+    toast('正在获取当前位置...', 'info');
+    navigator.geolocation.getCurrentPosition(position => {
+      fields.latitude.value = position.coords.latitude.toFixed(6);
+      fields.longitude.value = position.coords.longitude.toFixed(6);
+      toast('坐标已填入，地区和地址仍可手动编辑', 'success');
+    }, () => toast('定位未成功，请允许位置权限或手动填写坐标', 'error'), { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 });
+  }
+
+  async function createRecommendation() {
+    const button = $('#btnSaveRecommendation');
+    button.disabled = true;
+    dom.recommendationSaveStatus.textContent = '正在保存...';
+    try {
+      const record = await api('/api/family-recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: dom.recommendationTitle.value, kind: dom.recommendationKind.value, created_by: Number(dom.recommendationAuthor.value) || null, region: dom.recommendationRegion.value, address: dom.recommendationAddress.value, latitude: dom.recommendationLatitude.value, longitude: dom.recommendationLongitude.value, description: dom.recommendationDescription.value }) });
+      closeModal('recommendationModal');
+      await loadRecommendationData();
+      setMapTarget(record, record.title);
+      toast('推荐已保存到清单', 'success');
+    } finally {
+      button.disabled = false;
+      dom.recommendationSaveStatus.textContent = '';
+    }
+  }
+
+  async function createCheckin() {
+    const button = $('#btnSaveCheckin');
+    button.disabled = true;
+    dom.checkinSaveStatus.textContent = '正在保存...';
+    try {
+      const record = await api('/api/family-checkins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recommendation_id: Number(dom.checkinRecommendation.value) || null, checkin_date: dom.checkinDate.value, created_by: Number(dom.checkinAuthor.value) || null, region: dom.checkinRegion.value, address: dom.checkinAddress.value, latitude: dom.checkinLatitude.value, longitude: dom.checkinLongitude.value, note: dom.checkinNote.value }) });
+      closeModal('checkinModal');
+      await loadRecommendationData();
+      setMapTarget(record, record.recommendation_title || '最新打卡');
+      toast('打卡已永久保存', 'success');
+    } finally {
+      button.disabled = false;
+      dom.checkinSaveStatus.textContent = '';
+    }
+  }
+
   function setStep(step) {
+    state.currentStep = step;
     $$('.step-section').forEach(section => section.classList.toggle('hidden', section.id !== `step${step}`));
     dom.stepBar.classList.toggle('hidden', step === 1);
     $$('.step-dot').forEach(dot => {
@@ -488,6 +644,7 @@
     renderUsers();
     if (state.view === 'notes') renderNoteForm();
     if (state.view === 'pets') renderPetRecordForm();
+    if (state.view === 'recommendations') renderRecommendationForms();
   }
 
   async function loadDishes() {
@@ -843,6 +1000,9 @@
         if (state.view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(() => {});
         toast(`${data.record.pet_name} 新增了一条${careLabel(data.record.care_type)}记录`, 'info');
       }
+      if (data.type === 'recommendation' || data.type === 'recommendation_checkin') {
+        if (state.view === 'recommendations') loadRecommendationData().catch(() => {});
+      }
       if (data.type === 'selection_note' && state.view === 'menu' && data.date === state.date) refreshDashboard().catch(() => {});
     };
     source.onerror = () => { source.close(); setConnection('offline'); clearTimeout(state.retryTimer); state.retryTimer = setTimeout(connectEvents, Math.min(1000 * 2 ** Math.min(++state.retries, 5), 30000)); };
@@ -854,12 +1014,24 @@
     try {
       if (button.id === 'btnOpenMenu') return setView('menu');
       if (button.id === 'btnOpenNotes') return setView('notes');
-      if (button.id === 'btnHome' || button.id === 'btnNotesBack') return setView('home');
+      if (button.id === 'btnOpenRecommendations') return setView('recommendations');
+      if (button.id === 'btnHome' || button.id === 'btnNotesBack' || button.id === 'btnRecommendationsBack') return setView('home');
       if (button.id === 'btnPetsBack') return setView('menu');
       if (button.id === 'btnOpenNote') return openNoteComposer();
       if (button.id === 'btnCreateNote') return createSharedNote();
       if (button.id === 'btnOpenPetRecord') return openPetRecordForm();
       if (button.id === 'btnSavePetRecord') return createPetRecord();
+      if (button.id === 'btnOpenRecommendation') return openRecommendationForm();
+      if (button.id === 'btnSaveRecommendation') return createRecommendation();
+      if (button.id === 'btnOpenCheckin') return openCheckinForm();
+      if (button.id === 'btnSaveCheckin') return createCheckin();
+      if (button.id === 'btnLocateRecommendation') return useCurrentLocation('recommendation');
+      if (button.id === 'btnLocateCheckin') return useCurrentLocation('checkin');
+      if (button.id === 'btnUseCurrentLocation') { openCheckinForm(); return useCurrentLocation('checkin'); }
+      if (button.dataset.recommendationFilter) { state.recommendationFilter = button.dataset.recommendationFilter; $$('.recommendation-filter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderRecommendations(); }
+      if (button.dataset.showRecommendation) { const item = state.savedRecommendations.find(record => record.id === Number(button.dataset.showRecommendation)); if (!hasCoordinates(item)) return toast('这条推荐还没有坐标，可编辑后添加', 'info'); setMapTarget(item, item.title); return dom.recommendationMap.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      if (button.dataset.checkinRecommendation) return openCheckinForm(Number(button.dataset.checkinRecommendation));
+      if (button.dataset.showCheckin) { const item = state.checkins.find(record => record.id === Number(button.dataset.showCheckin)); if (!hasCoordinates(item)) return toast('这次打卡没有坐标', 'info'); setMapTarget(item, item.recommendation_title || '打卡地点'); return dom.recommendationMap.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       if (button.dataset.selectionNote) { dom.selectionNote.value = button.dataset.selectionNote; return dom.selectionNote.focus(); }
       if (button.dataset.noteTag) return addNoteTag(button.dataset.noteTag);
       if (button.dataset.petFilter) { state.petFilter = button.dataset.petFilter; $$('.pet-filter button').forEach(item => { const active = item === button; item.setAttribute('aria-pressed', String(active)); }); return renderPets(); }
@@ -958,6 +1130,7 @@
     if (state.recipeDone.size === state.recipe.steps.length) toast('这道菜完成啦，开饭！', 'success');
   });
   $$('.meal-card').forEach(card => card.addEventListener('click', () => { state.meal = card.dataset.meal; localStorage.setItem('fm_last_meal', state.meal); setStep(3); Promise.all([loadDishes(), loadRecentSelection()]).catch(error => toast(error.message, 'error')); }));
+  dom.checkinRecommendation.addEventListener('change', fillCheckinFromRecommendation);
   document.addEventListener('keydown', event => {
     if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { event.preventDefault(); dom.search.focus(); return; }
     const modal = $('.modal-overlay:not(.hidden)');

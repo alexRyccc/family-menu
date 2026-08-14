@@ -29,6 +29,11 @@
           <span class="home-choice-copy"><strong>猫家记事本</strong><small>按日期记录，也可以提醒家人</small></span>
           <span class="home-choice-arrow" aria-hidden="true">→</span>
         </button>
+        <button id="btnOpenRecommendations" class="home-choice home-choice-recommendations" type="button">
+          <span class="home-choice-icon" aria-hidden="true">⌖</span>
+          <span class="home-choice-copy"><strong>推荐清单</strong><small>收藏好去处、好商家和好物，也能地图打卡</small></span>
+          <span class="home-choice-arrow" aria-hidden="true">→</span>
+        </button>
       </div>
       <p class="home-footnote">一家人的小安排，随手记下来。</p>
     </div>
@@ -234,6 +239,39 @@
     </div>
   </section>
 
+  <section id="recommendationsView" class="recommendations-view hidden" aria-labelledby="recommendationsTitle">
+    <div class="recommendations-shell">
+      <header class="recommendations-heading">
+        <div>
+          <p class="notes-kicker">FAMILY FAVORITES</p>
+          <h1 id="recommendationsTitle">推荐清单</h1>
+          <p>把值得再去、再买、再推荐的好东西留在这里。</p>
+        </div>
+        <div class="recommendations-heading-actions">
+          <button id="btnRecommendationsBack" class="notes-back" type="button">← 返回主页</button>
+          <button id="btnOpenRecommendation" class="btn-primary" type="button">新增推荐</button>
+        </div>
+      </header>
+
+      <section class="recommendation-map-section" aria-labelledby="recommendationMapTitle">
+        <div class="recommendations-section-heading"><div><p class="notes-kicker">MAP</p><h2 id="recommendationMapTitle">免费地图定位</h2></div><button id="btnOpenCheckin" class="map-checkin-button" type="button">打卡</button></div>
+        <div class="recommendation-map-frame"><iframe id="recommendationMap" title="推荐地点地图" loading="lazy" referrerpolicy="no-referrer"></iframe></div>
+        <div class="map-caption"><span id="recommendationMapCaption">选择带坐标的推荐，或登记一次新的打卡。</span><button id="btnUseCurrentLocation" type="button">使用当前位置</button></div>
+      </section>
+
+      <section aria-labelledby="recommendationsListTitle">
+        <div class="recommendations-section-heading"><div><p class="notes-kicker">SAVED</p><h2 id="recommendationsListTitle">我的推荐</h2></div><span id="recommendationStats" aria-live="polite"></span></div>
+        <div class="recommendation-filter" aria-label="筛选推荐类型"><button type="button" data-recommendation-filter="all" aria-pressed="true">全部</button><button type="button" data-recommendation-filter="place" aria-pressed="false">地点</button><button type="button" data-recommendation-filter="merchant" aria-pressed="false">商家</button><button type="button" data-recommendation-filter="product" aria-pressed="false">商品</button></div>
+        <div id="recommendationList" class="recommendation-list" aria-live="polite"></div>
+      </section>
+
+      <section class="recommendation-history" aria-labelledby="checkinHistoryTitle">
+        <div class="recommendations-section-heading"><div><p class="notes-kicker">CHECK-INS</p><h2 id="checkinHistoryTitle">打卡记录</h2></div><span id="checkinCount" aria-live="polite"></span></div>
+        <div id="checkinList" class="checkin-list" aria-live="polite"></div>
+      </section>
+    </div>
+  </section>
+
   <div id="noteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="noteComposerTitle">
     <section class="modal note-modal" aria-label="记录事情">
       <div class="note-composer-heading">
@@ -280,6 +318,46 @@
         <span id="petRecordNoteCount" class="note-count">0 / 500</span>
         <button id="btnSavePetRecord" class="btn-primary" type="button">保存记录</button>
       </div>
+    </section>
+  </div>
+
+  <div id="recommendationModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="recommendationModalTitle">
+    <section class="modal recommendation-modal" aria-label="新增推荐">
+      <div class="note-composer-heading"><div><p class="notes-kicker">NEW FAVORITE</p><h2 id="recommendationModalTitle">新增推荐</h2></div><button class="recipe-close" type="button" data-close="recommendationModal" aria-label="关闭新增推荐窗口">×</button></div>
+      <p id="recommendationSaveStatus" role="status" aria-live="polite"></p>
+      <div class="recommendation-form-grid">
+        <label>名称<input id="recommendationTitle" type="text" maxlength="80" placeholder="例如：周末常去的咖啡馆" required></label>
+        <label>类型<select id="recommendationKind"><option value="place">地点</option><option value="merchant">商家</option><option value="product">商品</option></select></label>
+        <label>推荐人<select id="recommendationAuthor" aria-label="推荐人"></select></label>
+        <label>地区<input id="recommendationRegion" type="text" maxlength="80" placeholder="例如：杭州 · 西湖区"></label>
+        <label class="recommendation-wide">地址或平台<input id="recommendationAddress" type="text" maxlength="160" placeholder="例如：具体门店、商圈、商品链接名称"></label>
+        <label>纬度<input id="recommendationLatitude" type="number" inputmode="decimal" min="-90" max="90" step="any" placeholder="30.2741"></label>
+        <label>经度<input id="recommendationLongitude" type="number" inputmode="decimal" min="-180" max="180" step="any" placeholder="120.1551"></label>
+      </div>
+      <div class="location-actions"><button id="btnLocateRecommendation" type="button">使用当前位置填充坐标</button><span>坐标可留空；地点和商家建议添加，便于地图查看。</span></div>
+      <label class="note-content-label" for="recommendationDescription">推荐理由</label>
+      <textarea id="recommendationDescription" rows="3" maxlength="500" placeholder="为什么值得推荐，有什么必点、避坑或购买建议？"></textarea>
+      <div class="note-submit-row"><span></span><button id="btnSaveRecommendation" class="btn-primary" type="button">保存推荐</button></div>
+    </section>
+  </div>
+
+  <div id="checkinModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="checkinModalTitle">
+    <section class="modal recommendation-modal" aria-label="新增地图打卡">
+      <div class="note-composer-heading"><div><p class="notes-kicker">MAP CHECK-IN</p><h2 id="checkinModalTitle">登记打卡</h2></div><button class="recipe-close" type="button" data-close="checkinModal" aria-label="关闭打卡窗口">×</button></div>
+      <p id="checkinSaveStatus" role="status" aria-live="polite"></p>
+      <div class="recommendation-form-grid">
+        <label class="recommendation-wide">关联推荐<select id="checkinRecommendation" aria-label="关联推荐"></select></label>
+        <label>打卡日期<input id="checkinDate" type="date" required></label>
+        <label>记录人<select id="checkinAuthor" aria-label="记录人"></select></label>
+        <label>打卡地区<input id="checkinRegion" type="text" maxlength="80" placeholder="可手动修改，例如：杭州 · 上城区" required></label>
+        <label>详细地点<input id="checkinAddress" type="text" maxlength="160" placeholder="门店、商圈或地标"></label>
+        <label>纬度<input id="checkinLatitude" type="number" inputmode="decimal" min="-90" max="90" step="any" placeholder="30.2741" required></label>
+        <label>经度<input id="checkinLongitude" type="number" inputmode="decimal" min="-180" max="180" step="any" placeholder="120.1551" required></label>
+      </div>
+      <div class="location-actions"><button id="btnLocateCheckin" type="button">使用当前位置填充坐标</button><span>地区和地址始终可以按实际情况手动编辑。</span></div>
+      <label class="note-content-label" for="checkinNote">打卡感受</label>
+      <textarea id="checkinNote" rows="3" maxlength="500" placeholder="例如：今天人不多，咖啡很稳定，下次还会来。"></textarea>
+      <div class="note-submit-row"><span></span><button id="btnSaveCheckin" class="btn-primary" type="button">保存打卡</button></div>
     </section>
   </div>
 

@@ -142,6 +142,35 @@ db.exec(`
     FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
   );
 
+  CREATE TABLE IF NOT EXISTS recommendations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('place', 'merchant', 'product')),
+    description TEXT NOT NULL DEFAULT '',
+    region TEXT NOT NULL DEFAULT '',
+    address TEXT NOT NULL DEFAULT '',
+    latitude REAL,
+    longitude REAL,
+    created_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS recommendation_checkins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recommendation_id INTEGER,
+    checkin_date TEXT NOT NULL,
+    region TEXT NOT NULL DEFAULT '',
+    address TEXT NOT NULL DEFAULT '',
+    latitude REAL,
+    longitude REAL,
+    note TEXT NOT NULL DEFAULT '',
+    created_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY(recommendation_id) REFERENCES recommendations(id) ON DELETE SET NULL,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+  );
+
   -- 初始化默认提醒时间
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('lunch', '10:30');
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('dinner', '16:30');
@@ -156,6 +185,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_vote_selections_vote_id ON vote_selections(vote_id);
   CREATE INDEX IF NOT EXISTS idx_shared_notes_date ON shared_notes(note_date DESC, id DESC);
   CREATE INDEX IF NOT EXISTS idx_pet_care_records_pet_date ON pet_care_records(pet_id, care_date DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_recommendations_kind ON recommendations(kind, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_recommendation_checkins_date ON recommendation_checkins(checkin_date DESC, id DESC);
 `);
 
 // Existing selections and notes retain their author; only update this family member's visual.
@@ -179,6 +210,7 @@ app.use(helmet({
       imgSrc: ["'self'", 'data:'],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
+      frameSrc: ["'self'", 'https://www.openstreetmap.org'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'none'"]
@@ -441,6 +473,92 @@ app.delete('/api/shared-notes/:id', (req, res) => {
 
 // ---------- 宠物清单 API ----------
 const PET_CARE_TYPES = new Set(['vaccine', 'internal_deworming', 'external_deworming', 'bath', 'nail_trim', 'health_check', 'vet_visit', 'weight']);
+const RECOMMENDATION_KINDS = new Set(['place', 'merchant', 'product']);
+
+function optionalCoordinate(value, min, max) {
+  if (value === '' || value == null) return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= min && number <= max ? number : undefined;
+}
+
+function recommendationLocation(body) {
+  const latitude = optionalCoordinate(body.latitude, -90, 90);
+  const longitude = optionalCoordinate(body.longitude, -180, 180);
+  if (latitude === undefined || longitude === undefined || (latitude == null) !== (longitude == null)) return null;
+  return { latitude, longitude };
+}
+
+function recommendationRecord(id) {
+  return db.prepare(
+    `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar,
+            (SELECT COUNT(*) FROM recommendation_checkins c WHERE c.recommendation_id = r.id) AS checkin_count,
+            (SELECT MAX(c.checkin_date) FROM recommendation_checkins c WHERE c.recommendation_id = r.id) AS last_checkin_date
+     FROM recommendations r LEFT JOIN users u ON u.id = r.created_by WHERE r.id = ?`
+  ).get(id);
+}
+
+app.get('/api/family-recommendations', (req, res) => {
+  const kind = typeof req.query.kind === 'string' ? req.query.kind : '';
+  if (kind && !RECOMMENDATION_KINDS.has(kind)) return res.status(400).json({ error: '推荐分类无效' });
+  const query = `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar,
+    (SELECT COUNT(*) FROM recommendation_checkins c WHERE c.recommendation_id = r.id) AS checkin_count,
+    (SELECT MAX(c.checkin_date) FROM recommendation_checkins c WHERE c.recommendation_id = r.id) AS last_checkin_date
+    FROM recommendations r LEFT JOIN users u ON u.id = r.created_by${kind ? ' WHERE r.kind = ?' : ''} ORDER BY r.id DESC`;
+  res.json(db.prepare(query).all(...(kind ? [kind] : [])));
+});
+
+app.post('/api/family-recommendations', (req, res) => {
+  const title = typeof req.body.title === 'string' ? req.body.title.trim().slice(0, 80) : '';
+  const kind = typeof req.body.kind === 'string' ? req.body.kind : '';
+  const description = typeof req.body.description === 'string' ? req.body.description.trim().slice(0, 500) : '';
+  const region = typeof req.body.region === 'string' ? req.body.region.trim().slice(0, 80) : '';
+  const address = typeof req.body.address === 'string' ? req.body.address.trim().slice(0, 160) : '';
+  const createdBy = req.body.created_by == null || req.body.created_by === '' ? null : positiveInt(req.body.created_by);
+  const location = recommendationLocation(req.body);
+  if (!title || !RECOMMENDATION_KINDS.has(kind) || !location) return res.status(400).json({ error: '请填写名称、分类，并检查坐标是否完整' });
+  if (createdBy && !db.prepare('SELECT 1 FROM users WHERE id = ?').get(createdBy)) return res.status(404).json({ error: '记录人不存在' });
+  const info = db.prepare(
+    'INSERT INTO recommendations (title, kind, description, region, address, latitude, longitude, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(title, kind, description, region, address, location.latitude, location.longitude, createdBy);
+  const record = recommendationRecord(info.lastInsertRowid);
+  broadcast({ type: 'recommendation', record });
+  res.status(201).json(record);
+});
+
+app.get('/api/family-checkins', (req, res) => {
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 80));
+  const rows = db.prepare(
+    `SELECT c.*, r.title AS recommendation_title, r.kind AS recommendation_kind,
+            u.name AS author_name, u.avatar AS author_avatar
+     FROM recommendation_checkins c LEFT JOIN recommendations r ON r.id = c.recommendation_id
+     LEFT JOIN users u ON u.id = c.created_by ORDER BY c.checkin_date DESC, c.id DESC LIMIT ?`
+  ).all(limit);
+  res.json(rows);
+});
+
+app.post('/api/family-checkins', (req, res) => {
+  const recommendationId = req.body.recommendation_id == null || req.body.recommendation_id === '' ? null : positiveInt(req.body.recommendation_id);
+  const checkinDate = req.body.checkin_date;
+  const region = typeof req.body.region === 'string' ? req.body.region.trim().slice(0, 80) : '';
+  const address = typeof req.body.address === 'string' ? req.body.address.trim().slice(0, 160) : '';
+  const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 500) : '';
+  const createdBy = req.body.created_by == null || req.body.created_by === '' ? null : positiveInt(req.body.created_by);
+  const location = recommendationLocation(req.body);
+  if (!isDate(checkinDate) || !region || !location) return res.status(400).json({ error: '请选择日期，填写打卡地区，并检查坐标是否完整' });
+  if (recommendationId && !db.prepare('SELECT 1 FROM recommendations WHERE id = ?').get(recommendationId)) return res.status(404).json({ error: '推荐项目不存在' });
+  if (createdBy && !db.prepare('SELECT 1 FROM users WHERE id = ?').get(createdBy)) return res.status(404).json({ error: '记录人不存在' });
+  const info = db.prepare(
+    'INSERT INTO recommendation_checkins (recommendation_id, checkin_date, region, address, latitude, longitude, note, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(recommendationId, checkinDate, region, address, location.latitude, location.longitude, note, createdBy);
+  const record = db.prepare(
+    `SELECT c.*, r.title AS recommendation_title, r.kind AS recommendation_kind,
+            u.name AS author_name, u.avatar AS author_avatar
+     FROM recommendation_checkins c LEFT JOIN recommendations r ON r.id = c.recommendation_id
+     LEFT JOIN users u ON u.id = c.created_by WHERE c.id = ?`
+  ).get(info.lastInsertRowid);
+  broadcast({ type: 'recommendation_checkin', record });
+  res.status(201).json(record);
+});
 
 app.get('/api/pets', (req, res) => {
   const pets = db.prepare('SELECT * FROM pets ORDER BY id').all();

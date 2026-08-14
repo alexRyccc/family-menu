@@ -1695,7 +1695,11 @@ body.app-notes #homeScreen,
 body.app-notes .main,
 body.app-pets #homeScreen,
 body.app-pets .main,
-body.app-pets .notes-view { display: none !important; }
+body.app-pets .notes-view,
+body.app-recommendations #homeScreen,
+body.app-recommendations .main,
+body.app-recommendations .notes-view,
+body.app-recommendations .pets-view { display: none !important; }
 .home-screen { min-height: 100dvh; padding: max(38px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom)); background: #fffaf0; }
 .home-inner { width: min(100%, 620px); min-height: calc(100dvh - 66px); display: flex; flex-direction: column; justify-content: center; margin: 0 auto; }
 .home-kicker, .notes-kicker { margin: 0 0 8px; color: #b77b1e; font-size: 12px; font-weight: 800; letter-spacing: .1em; }
@@ -1707,6 +1711,7 @@ body.app-pets .notes-view { display: none !important; }
 .home-choice:active { transform: translateY(0); }
 .home-choice-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: #fff1cf; color: #84510a; font-size: 25px; }
 .home-choice-notes .home-choice-icon { background: #f2eee1; color: #577150; font-family: Georgia, serif; font-size: 30px; font-weight: 700; }
+.home-choice-recommendations .home-choice-icon { background: #e4f0ea; color: #2d7660; font-size: 28px; font-weight: 800; }
 .home-choice-pets .home-choice-icon { background: #f8e6d7; color: #8f5d3c; }
 .home-choice-copy { display: grid; gap: 3px; min-width: 0; }
 .home-choice-copy strong { color: #3d2b16; font-size: 19px; line-height: 1.25; }
@@ -1938,6 +1943,86 @@ body.app-pets .notes-view { display: none !important; }
   .pet-record-modal { animation: note-modal-in 180ms both; }
   .pet-card { transition: border-color 180ms ease, transform 180ms ease; }
   .pet-card:hover { border-color: #d1a35d; transform: translateY(-2px); }
+}
+
+/* ---------- 推荐清单 ---------- */
+.recommendations-view { min-height: calc(100dvh - 56px); padding: 34px 20px 56px; background: #fffaf0; }
+.recommendations-shell { width: min(100%, 860px); margin: 0 auto; }
+.recommendations-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding-bottom: 28px; border-bottom: 1px solid #ead8b4; }
+.recommendations-heading h1 { margin: 0; color: #3d2b16; font-family: var(--font-display); font-size: 30px; line-height: 1.2; }
+.recommendations-heading p:not(.notes-kicker) { margin: 8px 0 0; color: #795d39; font-size: 15px; }
+.recommendations-heading-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.recommendations-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-top: 28px; padding-bottom: 12px; border-bottom: 1px solid #ead8b4; }
+.recommendations-section-heading .notes-kicker { margin-bottom: 4px; }
+.recommendations-section-heading h2 { margin: 0; color: #3d2b16; font-size: 19px; }
+.recommendations-section-heading > span { color: #987d55; font-size: 12px; font-weight: 650; text-align: right; }
+.map-checkin-button { min-height: 36px; padding: 0 14px; border: 1px solid #c95f45; border-radius: 999px; background: #fffdf8; color: #a84c37; font: inherit; font-size: 13px; font-weight: 750; }
+.map-checkin-button:hover { background: #fff0e8; }
+.recommendation-map-frame { height: 270px; margin-top: 14px; overflow: hidden; border: 1px solid #ead8b4; border-radius: 8px; background: #f0ede5; }
+.recommendation-map-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
+.map-caption { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 0; color: #795d39; font-size: 12px; line-height: 1.5; }
+.map-caption span { min-width: 0; }
+.map-caption button, .location-actions button { flex: 0 0 auto; min-height: 34px; padding: 0 10px; border: 1px solid #d6b476; border-radius: 6px; background: #fffdf8; color: #7d5823; font: inherit; font-size: 12px; font-weight: 720; }
+.map-caption button:hover, .location-actions button:hover { background: #fff2d8; border-color: #bd8733; }
+.recommendation-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.recommendation-filter button { min-height: 34px; padding: 0 13px; border: 1px solid #e4c999; border-radius: 999px; background: transparent; color: #876439; font: inherit; font-size: 13px; font-weight: 700; }
+.recommendation-filter button[aria-pressed="true"] { border-color: #c95f45; background: #c95f45; color: #fff; box-shadow: 0 5px 12px rgba(173, 75, 52, .16); }
+.recommendation-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.recommendation-card { display: flex; flex-direction: column; min-width: 0; min-height: 210px; padding: 16px; border: 1px solid #ead8b4; border-radius: 8px; background: #fffdf8; box-shadow: 0 8px 20px rgba(110, 74, 21, .04); }
+.recommendation-card-top, .recommendation-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.recommendation-card-top time { color: #a18864; font-size: 11px; }
+.recommendation-kind { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; background: #edf5ef; color: #3d7760; font-size: 11px; font-weight: 800; }
+.recommendation-kind-merchant { background: #fff1da; color: #9a6220; }
+.recommendation-kind-product { background: #f6eaf0; color: #9a4c68; }
+.recommendation-card h3 { margin: 14px 0 6px; color: #46311a; font-size: 18px; line-height: 1.35; }
+.recommendation-location { margin: 0; overflow: hidden; color: #8b6d45; font-size: 12px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.recommendation-description { display: -webkit-box; flex: 1; margin: 12px 0; overflow: hidden; color: #6e593a; font-size: 13px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.recommendation-card-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid #f0e4cc; }
+.recommendation-card-footer small { max-width: 52%; overflow: hidden; color: #987d55; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.recommendation-card-footer > div { display: flex; gap: 6px; }
+.recommendation-card-footer button, .checkin-entry > button { min-height: 30px; padding: 0 9px; border: 1px solid #dfc18a; border-radius: 6px; background: #fffaf0; color: #7d5823; font: inherit; font-size: 11px; font-weight: 740; }
+.recommendation-card-footer button:hover, .checkin-entry > button:hover { border-color: #c95f45; color: #a84c37; }
+.recommendation-history { margin-top: 28px; }
+.checkin-list { min-height: 110px; }
+.checkin-entry { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; padding: 16px 2px; border-bottom: 1px solid #ead8b4; }
+.checkin-marker { padding-top: 2px; color: #c95f45; font-size: 17px; line-height: 1; }
+.checkin-entry-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.checkin-entry strong { overflow: hidden; color: #4a351d; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.checkin-entry time, .checkin-entry small { color: #987d55; font-size: 11px; white-space: nowrap; }
+.checkin-entry p { margin: 5px 0 0; color: #765d3b; font-size: 12px; line-height: 1.5; }
+.checkin-entry .checkin-note { color: #5d4527; }
+.checkin-entry small { display: block; margin-top: 7px; }
+.recommendation-modal { width: min(100%, 620px); }
+.recommendation-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.recommendation-form-grid label { display: grid; gap: 6px; color: #654925; font-size: 13px; font-weight: 700; }
+.recommendation-form-grid input, .recommendation-form-grid select { min-width: 0; min-height: 42px; padding: 0 10px; border: 1px solid #dfcba7; border-radius: 6px; background: #fffdf8; color: #3d2b16; font: inherit; }
+.recommendation-form-grid input:focus, .recommendation-form-grid select:focus, .recommendation-modal textarea:focus { border-color: #c95f45; outline: 3px solid rgba(201, 95, 69, .15); }
+.recommendation-wide { grid-column: 1 / -1; }
+.location-actions { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.location-actions span { color: #967b55; font-size: 12px; line-height: 1.45; }
+.recommendation-modal textarea { width: 100%; min-height: 92px; padding: 11px; border: 1px solid #dfcba7; border-radius: 6px; background: #fffdf8; color: #3d2b16; font: inherit; line-height: 1.55; resize: vertical; }
+[data-theme="dark"] .recommendations-view { background: #24211a; }
+[data-theme="dark"] .recommendations-heading h1, [data-theme="dark"] .recommendations-section-heading h2, [data-theme="dark"] .recommendation-card h3, [data-theme="dark"] .checkin-entry strong, [data-theme="dark"] .recommendation-modal h2 { color: #f5ead7; }
+[data-theme="dark"] .recommendations-heading p:not(.notes-kicker), [data-theme="dark"] .recommendation-location, [data-theme="dark"] .recommendation-description, [data-theme="dark"] .checkin-entry p { color: #ccb995; }
+[data-theme="dark"] .recommendation-card, [data-theme="dark"] .recommendation-modal { border-color: #5b4d35; background: #2d291f; box-shadow: none; }
+[data-theme="dark"] .recommendation-form-grid input, [data-theme="dark"] .recommendation-form-grid select, [data-theme="dark"] .recommendation-modal textarea, [data-theme="dark"] .map-caption button, [data-theme="dark"] .location-actions button { border-color: #5b4d35; background: #29251d; color: #f5ead7; }
+@media (max-width: 700px) { .recommendation-list { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .recommendations-view { padding: 24px 16px 40px; }
+  .recommendations-heading { display: grid; gap: 16px; padding-bottom: 22px; }
+  .recommendations-heading h1 { font-size: 27px; }
+  .recommendations-heading-actions > * { flex: 1; min-height: 48px; }
+  .recommendation-map-frame { height: 230px; }
+  .map-caption { align-items: flex-start; }
+  .recommendation-form-grid { grid-template-columns: 1fr; gap: 10px; }
+  .location-actions { align-items: flex-start; flex-direction: column; }
+  .recommendation-modal { width: min(100%, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 18px; overflow: auto; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .app-recommendations .recommendations-shell { animation: notes-page-in 220ms both; }
+  .recommendation-card { transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+  .recommendation-card:hover { border-color: #d1a35d; transform: translateY(-2px); box-shadow: 0 12px 24px rgba(110, 74, 21, .08); }
+  .recommendation-modal { animation: note-modal-in 180ms both; }
 }
 
 /* ---------- 统一操作控件与点菜内宠物入口 ---------- */
