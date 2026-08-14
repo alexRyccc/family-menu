@@ -1793,3 +1793,64 @@ body.app-notes .main { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .home-choice { transition: none; }
 }
+
+/* ---------- 记事本内容优先与返回入口 ---------- */
+.topbar-home { display: inline-flex; min-width: 108px; min-height: 46px; align-items: center; justify-content: center; gap: 7px; padding: 0 13px; border: 1px solid #d9bb82; border-radius: 6px; background: #fffaf0; color: #65451d; font-size: 15px; font-weight: 800; white-space: nowrap; transition: border-color 180ms ease, background 180ms ease, transform 180ms ease; }
+.topbar-home:hover { border-color: #b98530; background: #fff1cf; }
+.topbar-home:active { transform: translateY(1px); }
+.topbar-home:focus-visible, .notes-back:focus-visible, .note-copy:focus-visible, .notes-date-actions button:focus-visible, .mention-heading button:focus-visible { outline: 3px solid rgba(224, 178, 86, .34); outline-offset: 2px; }
+.topbar-context { overflow: hidden; color: var(--text); font-size: 17px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.notes-heading-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.notes-back { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; padding: 0 15px; border: 1px solid #d9bb82; border-radius: 6px; background: #fffdf8; color: #795019; font-size: 15px; font-weight: 800; white-space: nowrap; transition: border-color 180ms ease, background 180ms ease, transform 180ms ease; }
+.notes-back:hover { border-color: #b98530; background: #fff1cf; color: #3d2b16; }
+.notes-back:active { transform: translateY(1px); }
+.note-create { min-height: 46px; padding: 0 16px; white-space: nowrap; }
+.notes-timeline { margin-top: 26px; }
+.notes-timeline-heading { padding-bottom: 14px; }
+.notes-date-actions { display: inline-flex; align-items: center; gap: 4px; }
+.notes-date-actions button { display: inline-grid; min-width: 38px; min-height: 38px; place-items: center; padding: 0 9px; border: 1px solid #dfcda9; border-radius: 6px; background: #fffdf8; color: #795019; font-size: 16px; font-weight: 750; transition: border-color 180ms ease, background 180ms ease, transform 180ms ease; }
+.notes-date-actions button:hover { border-color: #b98530; background: #fff1cf; }
+.notes-date-actions button:active { transform: translateY(1px); }
+.notes-date-actions #btnNotesToday { min-width: 48px; font-size: 13px; }
+.notes-date-label { margin: 10px 0 0; color: #795d39; font-size: 13px; font-weight: 700; }
+.notes-list { min-height: 110px; }
+.notes-list[aria-busy="true"] { opacity: .55; transition: opacity 160ms ease; }
+.note-entry { position: relative; padding: 20px 2px; }
+.note-entry.note-just-added { background: #fff7e8; }
+.note-copy { display: grid; width: 28px; height: 28px; margin-left: 4px; place-items: center; border: 1px solid transparent; border-radius: 50%; color: #a28760; font-size: 17px; line-height: 1; }
+.note-copy:hover { border-color: #d8b77b; background: #fff1cf; color: #84510a; }
+.note-modal { width: min(100%, 560px); max-height: min(760px, calc(100dvh - 32px)); padding: 22px; overflow-y: auto; }
+.note-modal .note-composer-heading { align-items: flex-start; padding-bottom: 14px; border-bottom: 1px solid #ead8b4; }
+.note-modal .notes-kicker { margin-bottom: 5px; }
+.note-modal h2 { margin: 0; color: #3d2b16; font-size: 21px; }
+.note-modal #noteSaveStatus { min-height: 20px; margin: 8px 0 0; }
+.note-modal .note-fields { margin-top: 10px; }
+.mention-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mention-heading button { min-height: 30px; padding: 0 7px; border-bottom: 1px solid #b98530; color: #795019; font-size: 12px; font-weight: 750; white-space: nowrap; }
+.mention-heading button:hover { color: #3d2b16; }
+[data-theme="dark"] .topbar-home, [data-theme="dark"] .notes-back, [data-theme="dark"] .notes-date-actions button { border-color: #65593f; background: #302a1e; color: #f2dfbf; }
+[data-theme="dark"] .topbar-home:hover, [data-theme="dark"] .notes-back:hover, [data-theme="dark"] .notes-date-actions button:hover { background: #443a26; }
+[data-theme="dark"] .note-modal { background: #2d291f; }
+[data-theme="dark"] .note-modal h2, [data-theme="dark"] .topbar-context { color: #f5ead7; }
+
+@media (max-width: 640px) {
+  .topbar-home { min-width: 104px; min-height: 44px; padding: 0 10px; font-size: 14px; }
+  .topbar-context { font-size: 15px; }
+  .notes-heading { display: grid; gap: 16px; }
+  .notes-heading-actions { justify-content: stretch; }
+  .notes-heading-actions > * { flex: 1; }
+  .notes-back, .note-create { min-height: 48px; }
+  .notes-timeline-heading { align-items: center; }
+  .notes-date-label { margin-top: 8px; }
+  .note-modal { width: min(100%, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 18px; }
+  .note-modal .note-fields { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-notes .notes-shell { animation: notes-page-in 220ms both; }
+  .note-modal { animation: note-modal-in 180ms both; }
+  .note-entry.note-just-added { animation: note-created 520ms both; }
+  @keyframes notes-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes note-modal-in { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes note-created { 0% { background-color: #fff1cf; } 100% { background-color: transparent; } }
+}

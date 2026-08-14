@@ -24,7 +24,7 @@
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', notes: []
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', notes: [], justAddedNoteId: null
   };
   let toastTimer;
   let lastFocus = null;
@@ -115,7 +115,7 @@
     $('#homeScreen').classList.toggle('hidden', view !== 'home');
     $('#main').classList.toggle('hidden', view !== 'menu');
     dom.notesView.classList.toggle('hidden', view !== 'notes');
-    $('#btnHome').textContent = view === 'notes' ? '🐱 猫家的日常' : '🐱 猫家点菜';
+    $('#topbarContext').textContent = view === 'notes' ? '猫家记事本' : '猫家点菜';
     if (view === 'notes') {
       renderNoteForm();
       loadSharedNotes().catch(error => toast(error.message, 'error'));
@@ -131,6 +131,30 @@
     const authorId = Number(dom.noteAuthor.value);
     const selectedMentions = new Set($$('#mentionPicker input:checked').map(input => Number(input.value)));
     dom.mentionPicker.innerHTML = state.users.filter(user => user.id !== authorId).map(user => `<label class="mention-option"><input type="checkbox" value="${user.id}" ${selectedMentions.has(user.id) ? 'checked' : ''}><span style="background:${esc(user.color)}">${esc(user.avatar)}</span><b>${esc(user.name)}</b></label>`).join('') || '<span class="mention-empty">添加家人后，可以在这里提醒对方。</span>';
+    $('#btnMentionAll').textContent = '提醒全部家人';
+    updateNoteCount();
+  }
+
+  function saveNoteDraft() {
+    const draft = {
+      date: dom.noteDate.value || today(),
+      authorId: Number(dom.noteAuthor.value) || null,
+      content: dom.noteContent.value.slice(0, 1000),
+      mentions: $$('#mentionPicker input:checked').map(input => Number(input.value))
+    };
+    localStorage.setItem('fm_note_draft', JSON.stringify(draft));
+  }
+
+  function restoreNoteDraft() {
+    let draft = null;
+    try { draft = JSON.parse(localStorage.getItem('fm_note_draft') || 'null'); } catch (_) { localStorage.removeItem('fm_note_draft'); }
+    if (draft?.date && /^\d{4}-\d{2}-\d{2}$/.test(draft.date)) dom.noteDate.value = draft.date;
+    renderNoteForm();
+    if (draft?.authorId && state.users.some(user => user.id === draft.authorId)) dom.noteAuthor.value = String(draft.authorId);
+    renderNoteForm();
+    dom.noteContent.value = typeof draft?.content === 'string' ? draft.content.slice(0, 1000) : '';
+    const mentions = new Set(Array.isArray(draft?.mentions) ? draft.mentions : []);
+    $$('#mentionPicker input').forEach(input => { input.checked = mentions.has(Number(input.value)); });
     updateNoteCount();
   }
 
@@ -140,7 +164,8 @@
 
   function renderSharedNotes() {
     const date = dom.noteDate.value || today();
-    dom.notesDateLabel.textContent = dateLabel(date);
+    dom.notesDateLabel.textContent = `${dateLabel(date)} · ${state.notes.length} 条记录`;
+    $('#notesTimelineTitle').textContent = date === today() ? '今天的记录' : '当天记录';
     if (!state.notes.length) {
       dom.notesList.innerHTML = '<div class="notes-empty"><strong>这一天还没有记录</strong><span>先写下一件想让家人知道的小事。</span></div>';
       return;
@@ -150,7 +175,7 @@
       const content = esc(note.content).replace(/\n/g, '<br>');
       const canDelete = Number(dom.noteAuthor.value) === note.author_id;
       const remove = canDelete ? `<button class="note-delete" type="button" data-delete-note="${note.id}" title="删除这条记录" aria-label="删除 ${esc(note.author_name)} 的这条记录">×</button>` : '';
-      return `<article class="note-entry"><div class="note-author"><span style="background:${esc(note.author_color)}">${esc(note.author_avatar)}</span><strong>${esc(note.author_name)}</strong><time>${esc(String(note.created_at || '').slice(11, 16))}</time>${remove}</div><p>${content}</p>${mentions}</article>`;
+      return `<article class="note-entry ${note.id === state.justAddedNoteId ? 'note-just-added' : ''}"><div class="note-author"><span style="background:${esc(note.author_color)}">${esc(note.author_avatar)}</span><strong>${esc(note.author_name)}</strong><time>${esc(String(note.created_at || '').slice(11, 16))}</time><button class="note-copy" type="button" data-copy-note="${note.id}" title="复制这条记录" aria-label="复制 ${esc(note.author_name)} 的这条记录">⧉</button>${remove}</div><p>${content}</p>${mentions}</article>`;
     }).join('');
   }
 
@@ -177,12 +202,15 @@
     button.disabled = true;
     dom.noteSaveStatus.textContent = '正在发布...';
     try {
-      await api('/api/shared-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, note_date: noteDate, content, mention_user_ids: mentionUserIds }) });
+      const created = await api('/api/shared-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, note_date: noteDate, content, mention_user_ids: mentionUserIds }) });
+      state.justAddedNoteId = created.id;
       dom.noteContent.value = '';
       $$('#mentionPicker input').forEach(input => { input.checked = false; });
+      localStorage.removeItem('fm_note_draft');
       updateNoteCount();
       dom.noteSaveStatus.textContent = '已发布';
       await loadSharedNotes();
+      closeModal('noteModal');
       toast(mentionUserIds.length ? '记录已发布，家人会看到提醒' : '记录已发布', 'success');
     } finally {
       button.disabled = false;
@@ -196,6 +224,38 @@
     await api(`/api/shared-notes/${noteId}?author_id=${authorId}`, { method: 'DELETE' });
     await loadSharedNotes();
     toast('记录已删除', 'success');
+  }
+
+  function openNoteComposer() {
+    restoreNoteDraft();
+    dom.noteSaveStatus.textContent = '';
+    openModal('noteModal');
+  }
+
+  function changeNotesDate(change) {
+    const current = new Date(`${dom.noteDate.value || today()}T00:00:00`);
+    current.setDate(current.getDate() + change);
+    dom.noteDate.value = localDate(current);
+    loadSharedNotes().catch(error => toast(error.message, 'error'));
+    saveNoteDraft();
+  }
+
+  function toggleMentionAll() {
+    const mentions = $$('#mentionPicker input');
+    const selectAll = mentions.some(input => !input.checked);
+    mentions.forEach(input => { input.checked = selectAll; });
+    $('#btnMentionAll').textContent = selectAll ? '取消全部提醒' : '提醒全部家人';
+    saveNoteDraft();
+  }
+
+  async function copySharedNote(noteId) {
+    const note = state.notes.find(item => item.id === noteId);
+    if (!note) return;
+    const mentions = note.mentions?.length ? ` ${note.mentions.map(user => `@${user.name}`).join(' ')}` : '';
+    const text = `${note.note_date} ${note.author_name}：${note.content}${mentions}`;
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+    else window.prompt('复制记录', text);
+    toast('记录已复制', 'success');
   }
 
   function setStep(step) {
@@ -654,7 +714,13 @@
       if (button.id === 'btnOpenMenu') return setView('menu');
       if (button.id === 'btnOpenNotes') return setView('notes');
       if (button.id === 'btnHome' || button.id === 'btnNotesBack') return setView('home');
+      if (button.id === 'btnOpenNote') return openNoteComposer();
       if (button.id === 'btnCreateNote') return createSharedNote();
+      if (button.id === 'btnNotesPrev') return changeNotesDate(-1);
+      if (button.id === 'btnNotesToday') { dom.noteDate.value = today(); return loadSharedNotes(); }
+      if (button.id === 'btnNotesNext') return changeNotesDate(1);
+      if (button.id === 'btnMentionAll') return toggleMentionAll();
+      if (button.dataset.copyNote) return copySharedNote(Number(button.dataset.copyNote));
       if (button.dataset.deleteNote) return deleteSharedNote(Number(button.dataset.deleteNote));
       if (button.dataset.userId) return chooseUser(state.users.find(user => user.id === Number(button.dataset.userId)));
       if (button.dataset.switchId) return chooseUser(state.users.find(user => user.id === Number(button.dataset.switchId)));
@@ -717,9 +783,10 @@
   });
 
   dom.search.addEventListener('input', () => { state.query = dom.search.value.trim(); dom.searchClear.classList.toggle('hidden', !state.query); clearTimeout(dom.search.timer); dom.search.timer = setTimeout(() => loadDishes().catch(error => toast(error.message, 'error')), 250); });
-  dom.noteDate.addEventListener('change', () => loadSharedNotes().catch(error => toast(error.message, 'error')));
-  dom.noteAuthor.addEventListener('change', renderNoteForm);
-  dom.noteContent.addEventListener('input', updateNoteCount);
+  dom.noteDate.addEventListener('change', () => { loadSharedNotes().catch(error => toast(error.message, 'error')); saveNoteDraft(); });
+  dom.noteAuthor.addEventListener('change', () => { renderNoteForm(); saveNoteDraft(); });
+  dom.noteContent.addEventListener('input', () => { updateNoteCount(); saveNoteDraft(); });
+  dom.mentionPicker.addEventListener('change', saveNoteDraft);
   document.addEventListener('change', event => {
     const ingredient = event.target.closest('input[data-ingredient-index]');
     if (ingredient && state.recipe) {

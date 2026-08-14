@@ -26,7 +26,7 @@
         </button>
         <button id="btnOpenNotes" class="home-choice home-choice-notes" type="button">
           <span class="home-choice-icon" aria-hidden="true">✎</span>
-          <span class="home-choice-copy"><strong>共享记事本</strong><small>按日期记录，也可以提醒家人</small></span>
+          <span class="home-choice-copy"><strong>猫家记事本</strong><small>按日期记录，也可以提醒家人</small></span>
           <span class="home-choice-arrow" aria-hidden="true">→</span>
         </button>
       </div>
@@ -47,7 +47,8 @@
   <!-- 顶栏 -->
   <header class="topbar" id="topbar">
     <div class="topbar-left">
-      <button id="btnHome" class="topbar-logo" type="button" aria-label="返回猫家的日常主页">🐱 猫家点菜</button>
+      <button id="btnHome" class="topbar-home" type="button" aria-label="返回猫家的日常主页"><span aria-hidden="true">←</span><span>返回主页</span></button>
+      <span id="topbarContext" class="topbar-context">猫家点菜</span>
       <span id="connDot" class="conn-dot" title="连接中..."></span>
     </div>
     <div class="topbar-actions">
@@ -173,43 +174,54 @@
       <header class="notes-heading">
         <div>
           <p class="notes-kicker">SHARED NOTES</p>
-          <h1 id="notesTitle">共享记事本</h1>
+          <h1 id="notesTitle">猫家记事本</h1>
           <p>把要紧的小事留给今天，也轻轻提醒该看到的人。</p>
         </div>
-        <button id="btnNotesBack" class="notes-back" type="button">返回主页</button>
+        <div class="notes-heading-actions">
+          <button id="btnNotesBack" class="notes-back" type="button">← 返回主页</button>
+          <button id="btnOpenNote" class="btn-primary note-create" type="button">记录事情</button>
+        </div>
       </header>
-
-      <section class="note-composer" aria-labelledby="noteComposerTitle">
-        <div class="note-composer-heading">
-          <h2 id="noteComposerTitle">新建记录</h2>
-          <p id="noteSaveStatus" role="status" aria-live="polite"></p>
-        </div>
-        <div class="note-fields">
-          <label>日期<input id="noteDate" type="date" required></label>
-          <label>记录人<select id="noteAuthor" required aria-label="记录人"></select></label>
-        </div>
-        <label class="note-content-label" for="noteContent">内容</label>
-        <textarea id="noteContent" rows="4" maxlength="1000" placeholder="例如：周六下午要买猫砂，晚饭前记得拿快递。"></textarea>
-        <fieldset class="mention-picker">
-          <legend>提醒谁看</legend>
-          <p>选择家人后，会在记录里标记 @姓名。</p>
-          <div id="mentionPicker" class="mention-list"></div>
-        </fieldset>
-        <div class="note-submit-row">
-          <span id="noteCount" class="note-count">0 / 1000</span>
-          <button id="btnCreateNote" class="btn-primary" type="button">发布记录</button>
-        </div>
-      </section>
 
       <section class="notes-timeline" aria-labelledby="notesTimelineTitle">
         <div class="notes-timeline-heading">
           <div><p class="notes-kicker">TODAY</p><h2 id="notesTimelineTitle">当天记录</h2></div>
-          <span id="notesDateLabel" aria-live="polite"></span>
+          <div class="notes-date-actions" aria-label="切换记录日期">
+            <button id="btnNotesPrev" type="button" aria-label="查看前一天">‹</button>
+            <button id="btnNotesToday" type="button">今天</button>
+            <button id="btnNotesNext" type="button" aria-label="查看后一天">›</button>
+          </div>
         </div>
+        <p id="notesDateLabel" class="notes-date-label" aria-live="polite"></p>
         <div id="notesList" class="notes-list" aria-live="polite"></div>
       </section>
     </div>
   </section>
+
+  <div id="noteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="noteComposerTitle">
+    <section class="modal note-modal" aria-label="记录事情">
+      <div class="note-composer-heading">
+        <div><p class="notes-kicker">NEW NOTE</p><h2 id="noteComposerTitle">记录事情</h2></div>
+        <button class="recipe-close" type="button" data-close="noteModal" aria-label="关闭记录窗口">×</button>
+      </div>
+      <p id="noteSaveStatus" role="status" aria-live="polite"></p>
+      <div class="note-fields">
+        <label>日期<input id="noteDate" type="date" required></label>
+        <label>记录人<select id="noteAuthor" required aria-label="记录人"></select></label>
+      </div>
+      <label class="note-content-label" for="noteContent">内容</label>
+      <textarea id="noteContent" rows="4" maxlength="1000" placeholder="例如：周六下午要买猫砂，晚饭前记得拿快递。"></textarea>
+      <fieldset class="mention-picker">
+        <div class="mention-heading"><legend>提醒谁看</legend><button id="btnMentionAll" type="button">提醒全部家人</button></div>
+        <p>选择家人后，会在记录里标记 @姓名。</p>
+        <div id="mentionPicker" class="mention-list"></div>
+      </fieldset>
+      <div class="note-submit-row">
+        <span id="noteCount" class="note-count">0 / 1000</span>
+        <button id="btnCreateNote" class="btn-primary" type="button">发布记录</button>
+      </div>
+    </section>
+  </div>
 
   <!-- 更多菜单 -->
   <div id="moreMenu" class="modal-overlay hidden">
