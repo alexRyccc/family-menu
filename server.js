@@ -119,6 +119,11 @@ db.exec(`
     author_id INTEGER NOT NULL,
     mention_user_ids TEXT NOT NULL DEFAULT '[]',
     pinned INTEGER NOT NULL DEFAULT 0,
+    is_task INTEGER NOT NULL DEFAULT 0,
+    due_date TEXT NOT NULL DEFAULT '',
+    task_done INTEGER NOT NULL DEFAULT 0,
+    completed_by INTEGER,
+    completed_at TEXT,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
   );
@@ -138,6 +143,11 @@ db.exec(`
     care_type TEXT NOT NULL,
     care_date TEXT NOT NULL,
     note TEXT NOT NULL DEFAULT '',
+    clinic TEXT NOT NULL DEFAULT '',
+    medication TEXT NOT NULL DEFAULT '',
+    weight_kg REAL,
+    attachment_path TEXT NOT NULL DEFAULT '',
+    next_due_date TEXT NOT NULL DEFAULT '',
     created_by INTEGER,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY(pet_id) REFERENCES pets(id) ON DELETE RESTRICT,
@@ -185,6 +195,45 @@ db.exec(`
     UNIQUE(recommendation_id, image_path)
   );
 
+  CREATE TABLE IF NOT EXISTS note_reads (
+    note_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    read_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    PRIMARY KEY (note_id, user_id),
+    FOREIGN KEY(note_id) REFERENCES shared_notes(id) ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id INTEGER PRIMARY KEY,
+    tags TEXT NOT NULL DEFAULT '[]',
+    updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS pet_care_templates (
+    pet_id INTEGER NOT NULL,
+    care_type TEXT NOT NULL,
+    interval_days INTEGER NOT NULL,
+    clinic TEXT NOT NULL DEFAULT '',
+    medication TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (pet_id, care_type),
+    FOREIGN KEY(pet_id) REFERENCES pets(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS pet_care_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pet_id INTEGER NOT NULL,
+    care_type TEXT NOT NULL,
+    due_date TEXT NOT NULL,
+    source_record_id INTEGER,
+    done INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    UNIQUE(pet_id, care_type, due_date),
+    FOREIGN KEY(pet_id) REFERENCES pets(id) ON DELETE CASCADE,
+    FOREIGN KEY(source_record_id) REFERENCES pet_care_records(id) ON DELETE SET NULL
+  );
+
   -- 初始化默认提醒时间
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('lunch', '10:30');
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('dinner', '16:30');
@@ -202,6 +251,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_recommendations_kind ON recommendations(kind, id DESC);
   CREATE INDEX IF NOT EXISTS idx_recommendation_checkins_date ON recommendation_checkins(checkin_date DESC, id DESC);
   CREATE INDEX IF NOT EXISTS idx_recommendation_images_recommendation ON recommendation_images(recommendation_id, sort_order);
+  CREATE INDEX IF NOT EXISTS idx_pet_care_tasks_due ON pet_care_tasks(done, due_date);
+  CREATE INDEX IF NOT EXISTS idx_note_reads_user ON note_reads(user_id, note_id);
 `);
 
 // Existing selections and notes retain their author; only update this family member's visual.
@@ -212,6 +263,9 @@ if (!db.prepare('PRAGMA table_info(selections)').all().some(column => column.nam
 if (!db.prepare('PRAGMA table_info(shared_notes)').all().some(column => column.name === 'pinned')) {
   db.exec("ALTER TABLE shared_notes ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0");
 }
+for (const [column, definition] of [['is_task', "INTEGER NOT NULL DEFAULT 0"], ['due_date', "TEXT NOT NULL DEFAULT ''"], ['task_done', "INTEGER NOT NULL DEFAULT 0"], ['completed_by', 'INTEGER'], ['completed_at', 'TEXT']]) {
+  if (!db.prepare('PRAGMA table_info(shared_notes)').all().some(item => item.name === column)) db.exec(`ALTER TABLE shared_notes ADD COLUMN ${column} ${definition}`);
+}
 if (!db.prepare('PRAGMA table_info(pets)').all().some(column => column.name === 'gender')) {
   db.exec("ALTER TABLE pets ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
 }
@@ -221,14 +275,20 @@ if (!db.prepare('PRAGMA table_info(recommendations)').all().some(column => colum
 if (!db.prepare('PRAGMA table_info(recommendations)').all().some(column => column.name === 'travel_key')) {
   db.exec("ALTER TABLE recommendations ADD COLUMN travel_key TEXT NOT NULL DEFAULT ''");
 }
+for (const [column, definition] of [['rating', 'INTEGER NOT NULL DEFAULT 0'], ['tags', "TEXT NOT NULL DEFAULT '[]'"], ['revisit_reason', "TEXT NOT NULL DEFAULT ''"], ['visit_status', "TEXT NOT NULL DEFAULT 'want'"]]) {
+  if (!db.prepare('PRAGMA table_info(recommendations)').all().some(item => item.name === column)) db.exec(`ALTER TABLE recommendations ADD COLUMN ${column} ${definition}`);
+}
+for (const [column, definition] of [['clinic', "TEXT NOT NULL DEFAULT ''"], ['medication', "TEXT NOT NULL DEFAULT ''"], ['weight_kg', 'REAL'], ['attachment_path', "TEXT NOT NULL DEFAULT ''"], ['next_due_date', "TEXT NOT NULL DEFAULT ''"]]) {
+  if (!db.prepare('PRAGMA table_info(pet_care_records)').all().some(item => item.name === column)) db.exec(`ALTER TABLE pet_care_records ADD COLUMN ${column} ${definition}`);
+}
 db.prepare("UPDATE pets SET avatar = '/assets/pets/meimei.jpg', gender = '母猫' WHERE name = '妹妹'").run();
 db.prepare("UPDATE pets SET avatar = '/assets/pets/giao.jpg', gender = '公猫' WHERE name = 'giao'").run();
 db.prepare("UPDATE pets SET avatar = '/assets/pets/miemie.jpg', gender = '母猫' WHERE name = '咩咩'").run();
 
 const seedTravelCities = db.transaction(() => {
   const find = db.prepare("SELECT id FROM recommendations WHERE travel_key = ?");
-  const insert = db.prepare('INSERT INTO recommendations (title, kind, description, region, address, latitude, longitude, visited_label, travel_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  const update = db.prepare('UPDATE recommendations SET title = ?, kind = ?, description = ?, region = ?, address = ?, latitude = ?, longitude = ?, visited_label = ? WHERE id = ?');
+  const insert = db.prepare("INSERT INTO recommendations (title, kind, description, region, address, latitude, longitude, visited_label, travel_key, visit_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'visited')");
+  const update = db.prepare("UPDATE recommendations SET title = ?, kind = ?, description = ?, region = ?, address = ?, latitude = ?, longitude = ?, visited_label = ?, visit_status = 'visited' WHERE id = ?");
   const addImage = db.prepare('INSERT OR IGNORE INTO recommendation_images (recommendation_id, image_path, caption, sort_order) VALUES (?, ?, ?, ?)');
   const findCheckin = db.prepare('SELECT id FROM recommendation_checkins WHERE recommendation_id = ? AND checkin_date = ?');
   const addCheckin = db.prepare('INSERT INTO recommendation_checkins (recommendation_id, checkin_date, region, address, latitude, longitude, note) VALUES (?, ?, ?, ?, ?, ?, ?)');
@@ -286,6 +346,21 @@ const IMAGE_TYPES = new Map([
 function positiveInt(value) {
   const result = Number(value);
   return Number.isSafeInteger(result) && result > 0 ? result : null;
+}
+
+const PREFERENCE_TAGS = new Set(['no_spicy', 'no_cilantro', 'no_seafood', 'light']);
+const PET_INTERVALS = { vaccine: 365, internal_deworming: 90, external_deworming: 30, bath: 30, nail_trim: 21, health_check: 180 };
+
+function cleanTags(value, allowed = null) {
+  if (!Array.isArray(value)) return [];
+  const tags = value.map(item => typeof item === 'string' ? item.trim().slice(0, 24) : '').filter(Boolean);
+  return [...new Set(allowed ? tags.filter(tag => allowed.has(tag)) : tags)].slice(0, 12);
+}
+
+function addDays(date, days) {
+  const next = new Date(`${date}T00:00:00`);
+  next.setDate(next.getDate() + days);
+  return [next.getFullYear(), String(next.getMonth() + 1).padStart(2, '0'), String(next.getDate()).padStart(2, '0')].join('-');
 }
 
 function isMeal(value) {
@@ -445,6 +520,21 @@ app.post('/api/users', (req, res) => {
   res.json(user);
 });
 
+app.get('/api/users/:id/preferences', (req, res) => {
+  const userId = positiveInt(req.params.id);
+  if (!userId || !db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId)) return res.status(404).json({ error: '家人不存在' });
+  const record = db.prepare('SELECT tags FROM user_preferences WHERE user_id = ?').get(userId);
+  res.json({ user_id: userId, tags: cleanTags(record ? JSON.parse(record.tags || '[]') : [], PREFERENCE_TAGS) });
+});
+
+app.put('/api/users/:id/preferences', (req, res) => {
+  const userId = positiveInt(req.params.id);
+  const tags = cleanTags(req.body.tags, PREFERENCE_TAGS);
+  if (!userId || !db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId)) return res.status(404).json({ error: '家人不存在' });
+  db.prepare("INSERT INTO user_preferences (user_id, tags, updated_at) VALUES (?, ?, datetime('now', 'localtime')) ON CONFLICT(user_id) DO UPDATE SET tags = excluded.tags, updated_at = excluded.updated_at").run(userId, JSON.stringify(tags));
+  res.json({ user_id: userId, tags });
+});
+
 // ---------- 共享记事本 API ----------
 function parseMentionIds(value) {
   try {
@@ -460,7 +550,9 @@ function serializeSharedNote(row) {
   const mentions = mentionIds.length
     ? db.prepare(`SELECT id, name, avatar, color FROM users WHERE id IN (${mentionIds.map(() => '?').join(',')}) ORDER BY id`).all(...mentionIds)
     : [];
-  return { ...row, mention_user_ids: mentionIds, mentions };
+  const readUserIds = db.prepare('SELECT user_id FROM note_reads WHERE note_id = ?').all(row.id).map(item => item.user_id);
+  const completer = row.completed_by ? db.prepare('SELECT id, name, avatar FROM users WHERE id = ?').get(row.completed_by) : null;
+  return { ...row, mention_user_ids: mentionIds, mentions, read_user_ids: readUserIds, completer };
 }
 
 app.get('/api/shared-notes', (req, res) => {
@@ -499,13 +591,15 @@ app.post('/api/shared-notes', (req, res) => {
   const mentionIds = Array.isArray(req.body.mention_user_ids)
     ? [...new Set(req.body.mention_user_ids.map(positiveInt).filter(Boolean))].slice(0, 12)
     : [];
+  const isTask = Boolean(req.body.is_task);
+  const dueDate = isTask && isDate(req.body.due_date) ? req.body.due_date : '';
   if (!authorId || !isDate(noteDate) || !content) return res.status(400).json({ error: '请填写日期、记录人和内容' });
   const author = db.prepare('SELECT id, name, avatar, color FROM users WHERE id = ?').get(authorId);
   if (!author) return res.status(404).json({ error: '记录人不存在' });
   const validMentionIds = mentionIds.filter(id => id !== authorId && db.prepare('SELECT 1 FROM users WHERE id = ?').get(id));
   const info = db.prepare(
-    'INSERT INTO shared_notes (note_date, content, author_id, mention_user_ids) VALUES (?, ?, ?, ?)'
-  ).run(noteDate, content, authorId, JSON.stringify(validMentionIds));
+    'INSERT INTO shared_notes (note_date, content, author_id, mention_user_ids, is_task, due_date) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(noteDate, content, authorId, JSON.stringify(validMentionIds), isTask ? 1 : 0, dueDate);
   const row = db.prepare(
     `SELECT n.*, u.name AS author_name, u.avatar AS author_avatar, u.color AS author_color
      FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.id = ?`
@@ -523,6 +617,18 @@ app.post('/api/shared-notes', (req, res) => {
     });
   }
   res.status(201).json(note);
+});
+
+app.post('/api/shared-notes/read', (req, res) => {
+  const userId = positiveInt(req.body.user_id);
+  const noteIds = Array.isArray(req.body.note_ids) ? [...new Set(req.body.note_ids.map(positiveInt).filter(Boolean))].slice(0, 100) : [];
+  if (!userId || !noteIds.length) return res.status(400).json({ error: '参数无效' });
+  if (!db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId)) return res.status(404).json({ error: '家人不存在' });
+  const markRead = db.prepare("INSERT INTO note_reads (note_id, user_id, read_at) VALUES (?, ?, datetime('now', 'localtime')) ON CONFLICT(note_id, user_id) DO NOTHING");
+  const allowed = db.prepare('SELECT id, mention_user_ids FROM shared_notes WHERE id = ?');
+  const transaction = db.transaction(() => noteIds.forEach(noteId => { const note = allowed.get(noteId); if (note && parseMentionIds(note.mention_user_ids).includes(userId)) markRead.run(noteId, userId); }));
+  transaction();
+  res.json({ ok: true });
 });
 
 app.delete('/api/shared-notes/:id', (req, res) => {
@@ -550,9 +656,27 @@ app.patch('/api/shared-notes/:id/pin', (req, res) => {
   res.json({ ok: true, pinned: Boolean(pinned) });
 });
 
+app.patch('/api/shared-notes/:id/task', (req, res) => {
+  const noteId = positiveInt(req.params.id);
+  const userId = positiveInt(req.body.user_id);
+  const done = Boolean(req.body.done);
+  if (!noteId || !userId) return res.status(400).json({ error: '参数无效' });
+  const note = db.prepare('SELECT id, note_date, is_task FROM shared_notes WHERE id = ?').get(noteId);
+  if (!note || !note.is_task) return res.status(404).json({ error: '待办不存在' });
+  if (!db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId)) return res.status(404).json({ error: '家人不存在' });
+  db.prepare("UPDATE shared_notes SET task_done = ?, completed_by = ?, completed_at = CASE WHEN ? THEN datetime('now', 'localtime') ELSE NULL END WHERE id = ?").run(done ? 1 : 0, done ? userId : null, done ? 1 : 0, noteId);
+  broadcast({ type: 'shared_note_task', id: noteId, note_date: note.note_date, done });
+  res.json({ ok: true, done });
+});
+
 // ---------- 宠物清单 API ----------
 const PET_CARE_TYPES = new Set(['vaccine', 'internal_deworming', 'external_deworming', 'bath', 'nail_trim', 'health_check', 'vet_visit', 'weight']);
 const RECOMMENDATION_KINDS = new Set(['place', 'merchant', 'product']);
+
+function petCareInterval(petId, careType) {
+  const custom = db.prepare('SELECT interval_days FROM pet_care_templates WHERE pet_id = ? AND care_type = ?').get(petId, careType);
+  return custom?.interval_days || PET_INTERVALS[careType] || 0;
+}
 
 function optionalCoordinate(value, min, max) {
   if (value === '' || value == null) return null;
@@ -598,12 +722,16 @@ app.post('/api/family-recommendations', (req, res) => {
   const region = typeof req.body.region === 'string' ? req.body.region.trim().slice(0, 80) : '';
   const address = typeof req.body.address === 'string' ? req.body.address.trim().slice(0, 160) : '';
   const createdBy = req.body.created_by == null || req.body.created_by === '' ? null : positiveInt(req.body.created_by);
+  const rating = Math.max(0, Math.min(5, Number(req.body.rating) || 0));
+  const tags = cleanTags(req.body.tags);
+  const revisitReason = typeof req.body.revisit_reason === 'string' ? req.body.revisit_reason.trim().slice(0, 240) : '';
+  const visitStatus = req.body.visit_status === 'visited' ? 'visited' : 'want';
   const location = recommendationLocation(req.body);
   if (!title || !RECOMMENDATION_KINDS.has(kind) || !location) return res.status(400).json({ error: '请填写名称、分类，并检查坐标是否完整' });
   if (createdBy && !db.prepare('SELECT 1 FROM users WHERE id = ?').get(createdBy)) return res.status(404).json({ error: '记录人不存在' });
   const info = db.prepare(
-    'INSERT INTO recommendations (title, kind, description, region, address, latitude, longitude, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(title, kind, description, region, address, location.latitude, location.longitude, createdBy);
+    'INSERT INTO recommendations (title, kind, description, region, address, latitude, longitude, rating, tags, revisit_reason, visit_status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(title, kind, description, region, address, location.latitude, location.longitude, rating, JSON.stringify(tags), revisitReason, visitStatus, createdBy);
   const record = recommendationRecord(info.lastInsertRowid);
   broadcast({ type: 'recommendation', record });
   res.status(201).json(record);
@@ -682,19 +810,64 @@ app.get('/api/pet-care-records', (req, res) => {
   res.json(rows);
 });
 
+app.get('/api/pet-care-tasks', (req, res) => {
+  const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
+  const endDate = addDays(todayStr(), days);
+  const tasks = db.prepare(
+    `SELECT t.*, p.name AS pet_name, p.avatar AS pet_avatar, p.gender AS pet_gender, p.color AS pet_color
+     FROM pet_care_tasks t JOIN pets p ON p.id = t.pet_id
+     WHERE t.done = 0 AND t.due_date <= ? ORDER BY t.due_date, t.id`
+  ).all(endDate);
+  res.json(tasks);
+});
+
+app.get('/api/pet-care-templates', (req, res) => {
+  const templates = db.prepare('SELECT * FROM pet_care_templates ORDER BY pet_id, care_type').all();
+  res.json(templates);
+});
+
+app.put('/api/pet-care-templates', (req, res) => {
+  const petId = positiveInt(req.body.pet_id);
+  const careType = typeof req.body.care_type === 'string' ? req.body.care_type : '';
+  const interval = Math.min(730, Math.max(1, Number(req.body.interval_days) || 0));
+  const clinic = typeof req.body.clinic === 'string' ? req.body.clinic.trim().slice(0, 100) : '';
+  const medication = typeof req.body.medication === 'string' ? req.body.medication.trim().slice(0, 160) : '';
+  if (!petId || !PET_CARE_TYPES.has(careType) || !interval) return res.status(400).json({ error: '护理模板参数无效' });
+  if (!db.prepare('SELECT 1 FROM pets WHERE id = ?').get(petId)) return res.status(404).json({ error: '猫咪不存在' });
+  db.prepare("INSERT INTO pet_care_templates (pet_id, care_type, interval_days, clinic, medication) VALUES (?, ?, ?, ?, ?) ON CONFLICT(pet_id, care_type) DO UPDATE SET interval_days = excluded.interval_days, clinic = excluded.clinic, medication = excluded.medication").run(petId, careType, interval, clinic, medication);
+  res.json({ pet_id: petId, care_type: careType, interval_days: interval, clinic, medication });
+});
+
+app.patch('/api/pet-care-tasks/:id', (req, res) => {
+  const taskId = positiveInt(req.params.id);
+  if (!taskId) return res.status(400).json({ error: '任务无效' });
+  const task = db.prepare('SELECT id FROM pet_care_tasks WHERE id = ?').get(taskId);
+  if (!task) return res.status(404).json({ error: '任务不存在' });
+  db.prepare('UPDATE pet_care_tasks SET done = ? WHERE id = ?').run(req.body.done ? 1 : 0, taskId);
+  res.json({ ok: true });
+});
+
 app.post('/api/pet-care-records', (req, res) => {
   const petId = positiveInt(req.body.pet_id);
   const createdBy = req.body.created_by == null || req.body.created_by === '' ? null : positiveInt(req.body.created_by);
   const careType = typeof req.body.care_type === 'string' ? req.body.care_type : '';
   const careDate = req.body.care_date;
   const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 500) : '';
+  const clinic = typeof req.body.clinic === 'string' ? req.body.clinic.trim().slice(0, 100) : '';
+  const medication = typeof req.body.medication === 'string' ? req.body.medication.trim().slice(0, 160) : '';
+  const weight = req.body.weight_kg === '' || req.body.weight_kg == null ? null : Number(req.body.weight_kg);
+  const attachmentPath = typeof req.body.attachment_path === 'string' && /^\/uploads\/[a-zA-Z0-9._-]+$/.test(req.body.attachment_path) ? req.body.attachment_path : '';
   if (!petId || !PET_CARE_TYPES.has(careType) || !isDate(careDate)) return res.status(400).json({ error: '请选择猫咪、护理项目和日期' });
   const pet = db.prepare('SELECT * FROM pets WHERE id = ?').get(petId);
   if (!pet) return res.status(404).json({ error: '猫咪不存在' });
   if (createdBy && !db.prepare('SELECT 1 FROM users WHERE id = ?').get(createdBy)) return res.status(404).json({ error: '记录人不存在' });
+  if (weight != null && (!Number.isFinite(weight) || weight <= 0 || weight > 30)) return res.status(400).json({ error: '体重需在 0 到 30 千克之间' });
+  const interval = petCareInterval(petId, careType);
+  const nextDueDate = interval ? addDays(careDate, interval) : '';
   const info = db.prepare(
-    'INSERT INTO pet_care_records (pet_id, care_type, care_date, note, created_by) VALUES (?, ?, ?, ?, ?)'
-  ).run(petId, careType, careDate, note, createdBy);
+    'INSERT INTO pet_care_records (pet_id, care_type, care_date, note, clinic, medication, weight_kg, attachment_path, next_due_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(petId, careType, careDate, note, clinic, medication, weight, attachmentPath, nextDueDate, createdBy);
+  if (nextDueDate) db.prepare('INSERT OR IGNORE INTO pet_care_tasks (pet_id, care_type, due_date, source_record_id) VALUES (?, ?, ?, ?)').run(petId, careType, nextDueDate, info.lastInsertRowid);
   const record = db.prepare(
     `SELECT r.*, p.name AS pet_name, p.avatar AS pet_avatar, p.color AS pet_color,
             u.name AS author_name, u.avatar AS author_avatar
@@ -703,6 +876,69 @@ app.post('/api/pet-care-records', (req, res) => {
   ).get(info.lastInsertRowid);
   broadcast({ type: 'pet_care_record', record });
   res.status(201).json(record);
+});
+
+function shoppingQuantity(value) {
+  const match = String(value || '').trim().match(/^([\d.]+)\s*(.*)$/);
+  return match ? { amount: Number(match[1]), unit: match[2].trim() } : null;
+}
+
+app.get('/api/shopping-list', (req, res) => {
+  const date = isDate(req.query.date) ? req.query.date : todayStr();
+  const rows = db.prepare(
+    `SELECT DISTINCT d.id, d.name, d.category FROM selections s JOIN dishes d ON d.id = s.dish_id WHERE s.date = ? ORDER BY d.name`
+  ).all(date);
+  const items = new Map();
+  rows.forEach(dish => recipeForDish(dish).ingredients.forEach(([name, quantity]) => {
+    const key = String(name).trim();
+    const current = items.get(key) || { name: key, quantities: [], total: null, dishes: [] };
+    current.quantities.push(quantity);
+    current.dishes.push(dish.name);
+    const parsed = shoppingQuantity(quantity);
+    if (parsed && (current.total == null || current.total.unit === parsed.unit)) current.total = { amount: (current.total?.amount || 0) + parsed.amount, unit: parsed.unit };
+    else current.total = null;
+    items.set(key, current);
+  }));
+  res.json({ date, dishes: rows.map(item => item.name), items: [...items.values()].map(item => ({ ...item, quantity: item.total ? `${Number(item.total.amount.toFixed(2))}${item.total.unit}` : item.quantities.join(' + ') })) });
+});
+
+app.get('/api/home-dashboard', (req, res) => {
+  const today = todayStr();
+  const userId = positiveInt(req.query.user_id);
+  const petEnd = addDays(today, 14);
+  const mealCounts = db.prepare(`SELECT meal, COUNT(*) AS count FROM selections WHERE date = ? GROUP BY meal`).all(today);
+  const tasks = db.prepare(`SELECT n.id, n.content, n.due_date, n.note_date, u.name AS author_name FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.is_task = 1 AND n.task_done = 0 ORDER BY CASE WHEN n.due_date = '' THEN 1 ELSE 0 END, n.due_date, n.id DESC LIMIT 6`).all();
+  const mentionCandidates = userId
+    ? db.prepare(`SELECT n.id, n.content, n.note_date, n.mention_user_ids, u.name AS author_name FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.mention_user_ids <> '[]' ORDER BY n.id DESC LIMIT 80`).all()
+    : [];
+  const mentions = userId ? mentionCandidates.filter(note => {
+    const mentioned = parseMentionIds(note.mention_user_ids).includes(userId);
+    const read = db.prepare('SELECT 1 FROM note_reads WHERE note_id = ? AND user_id = ?').get(note.id, userId);
+    return mentioned && !read;
+  }).slice(0, 6) : [];
+  const petTasks = db.prepare(`SELECT t.id, t.due_date, t.care_type, p.name AS pet_name FROM pet_care_tasks t JOIN pets p ON p.id = t.pet_id WHERE t.done = 0 AND t.due_date <= ? ORDER BY t.due_date LIMIT 8`).all(petEnd);
+  const wantToVisit = db.prepare(`SELECT id, title, region FROM recommendations WHERE visit_status = 'want' ORDER BY id DESC LIMIT 6`).all();
+  res.json({ date: today, meals: mealCounts, tasks, mentions, pet_tasks: petTasks, want_to_visit: wantToVisit });
+});
+
+app.get('/api/family-timeline', (req, res) => {
+  const limit = Math.min(100, Math.max(10, Number(req.query.limit) || 30));
+  const rows = db.prepare(
+    `SELECT * FROM (
+      SELECT s.created_at AS happened_at, 'meal' AS kind, u.name AS actor_name, u.avatar AS actor_avatar, d.name AS title, s.meal AS detail
+      FROM selections s JOIN users u ON u.id = s.user_id JOIN dishes d ON d.id = s.dish_id
+      UNION ALL
+      SELECT n.created_at, 'note', u.name, u.avatar, n.content, CASE WHEN n.is_task = 1 THEN CASE WHEN n.task_done = 1 THEN '待办已完成' ELSE '待办进行中' END ELSE '记事本记录' END
+      FROM shared_notes n JOIN users u ON u.id = n.author_id
+      UNION ALL
+      SELECT r.created_at, 'pet', COALESCE(u.name, '家人'), COALESCE(u.avatar, '🐱'), p.name || ' · ' || r.care_type, r.care_date
+      FROM pet_care_records r JOIN pets p ON p.id = r.pet_id LEFT JOIN users u ON u.id = r.created_by
+      UNION ALL
+      SELECT c.created_at, 'checkin', COALESCE(u.name, '家人'), COALESCE(u.avatar, '📍'), COALESCE(rec.title, '独立打卡'), c.region
+      FROM recommendation_checkins c LEFT JOIN recommendations rec ON rec.id = c.recommendation_id LEFT JOIN users u ON u.id = c.created_by
+    ) ORDER BY happened_at DESC LIMIT ?`
+  ).all(limit);
+  res.json(rows);
 });
 
 // ---------- 菜品 API ----------
@@ -721,6 +957,11 @@ const upload = multer({
     if (IMAGE_TYPES.has(file.mimetype)) cb(null, true);
     else cb(new Error('只支持图片文件'));
   }
+});
+
+app.post('/api/pet-care-attachments', upload.single('attachment'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: '请选择一张图片附件' });
+  res.status(201).json({ path: `/uploads/${req.file.filename}` });
 });
 
 app.get('/api/categories', (req, res) => {

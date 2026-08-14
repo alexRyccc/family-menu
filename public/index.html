@@ -40,6 +40,14 @@
           <span class="home-choice-arrow" aria-hidden="true">→</span>
         </button>
       </div>
+      <section class="home-today" aria-labelledby="homeTodayTitle">
+        <div class="home-section-heading"><div><p class="home-kicker">TODAY</p><h2 id="homeTodayTitle">今日待办</h2></div><button id="btnRefreshHome" type="button">刷新</button></div>
+        <div id="homeTodayTodos" class="home-todo-grid" aria-live="polite"></div>
+      </section>
+      <section class="home-timeline" aria-labelledby="homeTimelineTitle">
+        <div class="home-section-heading"><div><p class="home-kicker">FAMILY LIVE</p><h2 id="homeTimelineTitle">家庭时间线</h2></div></div>
+        <div id="homeTimeline" class="home-timeline-list" aria-live="polite"></div>
+      </section>
       <p class="home-footnote">一家人的小安排，随手记下来。</p>
     </div>
   </section>
@@ -118,6 +126,7 @@
         <p>点一道菜告诉家人</p>
       </div>
       <section id="menuStatusPanel" class="menu-status-panel" aria-live="polite"></section>
+      <div id="preferenceBar" class="preference-bar" aria-label="当前口味偏好"></div>
       <div class="filter-row">
         <div id="catChips" class="cat-chips"></div>
         <button id="chipFav" class="chip chip-fav" aria-pressed="false">🤍 收藏</button>
@@ -280,6 +289,7 @@
         <div class="recommendations-section-heading"><div><p class="notes-kicker">SAVED</p><h2 id="recommendationsListTitle">我的推荐</h2></div><span id="recommendationStats" aria-live="polite"></span></div>
         <div class="recommendation-filter" aria-label="筛选推荐类型"><button type="button" data-recommendation-filter="all" aria-pressed="true">全部</button><button type="button" data-recommendation-filter="place" aria-pressed="false">地点</button><button type="button" data-recommendation-filter="merchant" aria-pressed="false">商家</button><button type="button" data-recommendation-filter="product" aria-pressed="false">商品</button></div>
         <div id="recommendationRegionFilter" class="recommendation-region-filter" aria-label="筛选地区"></div>
+        <div id="recommendationYearFilter" class="recommendation-region-filter recommendation-year-filter" aria-label="按年份浏览旅行城市"></div>
         <div id="recommendationList" class="recommendation-list" aria-live="polite"></div>
       </section>
 
@@ -301,6 +311,7 @@
         <label>日期<input id="noteDate" type="date" required></label>
         <label>记录人<select id="noteAuthor" required aria-label="记录人"></select></label>
       </div>
+      <div class="note-task-row"><label><input id="noteIsTask" type="checkbox"> 作为待办事项</label><label>截止日期<input id="noteDueDate" type="date" disabled></label></div>
       <label class="note-content-label" for="noteContent">内容</label>
       <div class="note-tag-row" aria-label="快捷标签"><button type="button" data-note-tag="提醒">提醒</button><button type="button" data-note-tag="采购">采购</button><button type="button" data-note-tag="外出">外出</button><button type="button" data-note-tag="重要">重要</button></div>
       <textarea id="noteContent" rows="4" maxlength="1000" placeholder="例如：周六下午要买猫砂，晚饭前记得拿快递。"></textarea>
@@ -328,6 +339,11 @@
         <label>护理项目<select id="petRecordType" required aria-label="选择护理项目"></select></label>
         <label>日期<input id="petRecordDate" type="date" required></label>
         <label>记录人<select id="petRecordAuthor" aria-label="记录人"></select></label>
+        <label>医院/机构<input id="petRecordClinic" type="text" maxlength="100" placeholder="例如：附近宠物医院"></label>
+        <label>用药/医嘱<input id="petRecordMedication" type="text" maxlength="160" placeholder="例如：滴剂名称、复诊提醒"></label>
+        <label>体重（kg）<input id="petRecordWeight" type="number" inputmode="decimal" min="0.1" max="30" step="0.01" placeholder="例如：4.25"></label>
+        <label>下次间隔（天）<input id="petRecordInterval" type="number" inputmode="numeric" min="1" max="730" step="1" placeholder="例如：30"></label>
+        <label>病历图片<input id="petRecordAttachment" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
       </div>
       <label class="note-content-label" for="petRecordNote">补充说明</label>
       <textarea id="petRecordNote" rows="3" maxlength="500" placeholder="例如：体内驱虫已完成，使用了哪种药、下次注意什么。"></textarea>
@@ -346,6 +362,8 @@
       <div class="recommendation-form-grid">
         <label>名称<input id="recommendationTitle" type="text" maxlength="80" placeholder="例如：周末常去的咖啡馆" required></label>
         <label>类型<select id="recommendationKind"><option value="place">地点</option><option value="merchant">商家</option><option value="product">商品</option></select></label>
+        <label>状态<select id="recommendationVisitStatus"><option value="want">想去/想买</option><option value="visited">去过/已拥有</option></select></label>
+        <label>推荐程度<select id="recommendationRating"><option value="0">未评分</option><option value="5">5 星</option><option value="4">4 星</option><option value="3">3 星</option><option value="2">2 星</option><option value="1">1 星</option></select></label>
         <label>推荐人<select id="recommendationAuthor" aria-label="推荐人"></select></label>
         <label>地区<input id="recommendationRegion" type="text" maxlength="80" placeholder="例如：杭州 · 西湖区"></label>
         <label class="recommendation-wide">地址或平台<input id="recommendationAddress" type="text" maxlength="160" placeholder="例如：具体门店、商圈、商品链接名称"></label>
@@ -355,6 +373,10 @@
       <div class="location-actions"><button id="btnLocateRecommendation" type="button">使用当前位置填充坐标</button><span>坐标可留空；地点和商家建议添加，便于地图查看。</span></div>
       <label class="note-content-label" for="recommendationDescription">推荐理由</label>
       <textarea id="recommendationDescription" rows="3" maxlength="500" placeholder="为什么值得推荐，有什么必点、避坑或购买建议？"></textarea>
+      <label class="note-content-label" for="recommendationTags">标签</label>
+      <input id="recommendationTags" type="text" maxlength="100" placeholder="例如：约会、夜景、回购，使用逗号分隔">
+      <label class="note-content-label" for="recommendationRevisitReason">再次推荐原因</label>
+      <input id="recommendationRevisitReason" type="text" maxlength="240" placeholder="例如：下次想带家人再去">
       <div class="note-submit-row"><span></span><button id="btnSaveRecommendation" class="btn-primary" type="button">保存推荐</button></div>
     </section>
   </div>
@@ -390,6 +412,8 @@
       <button class="menu-item" id="menuNotify">🔔 通知设置</button>
       <button class="menu-item" id="menuStats">📊 餐桌统计</button>
       <button class="menu-item" id="menuShortcuts">⌨️ 快捷操作</button>
+      <button class="menu-item" id="menuPreferences">🥗 我的忌口与偏好</button>
+      <button class="menu-item" id="menuShopping">🧺 汇总购物清单</button>
       <button class="menu-item" data-close="moreMenu">关闭</button>
     </div>
   </div>
@@ -622,6 +646,24 @@
         <button class="btn-primary" data-close="recipeModal" type="button">完成制作</button>
       </div>
     </div>
+  </div>
+
+  <div id="preferencesModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="preferencesTitle">
+    <section class="modal compact-modal">
+      <div class="note-composer-heading"><div><p class="notes-kicker">MY TASTE</p><h2 id="preferencesTitle">忌口与偏好</h2></div><button class="recipe-close" type="button" data-close="preferencesModal" aria-label="关闭偏好设置">×</button></div>
+      <p class="modal-desc">选中的条件会优先隐藏不适合自己的菜品。</p>
+      <div id="preferencePicker" class="preference-picker"></div>
+      <div class="btn-row"><button class="btn-secondary" data-close="preferencesModal">取消</button><button id="btnSavePreferences" class="btn-primary" type="button">保存偏好</button></div>
+    </section>
+  </div>
+
+  <div id="shoppingModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="shoppingTitle">
+    <section class="modal shopping-modal">
+      <div class="note-composer-heading"><div><p class="notes-kicker">SHOPPING LIST</p><h2 id="shoppingTitle">本日购物清单</h2></div><button class="recipe-close" type="button" data-close="shoppingModal" aria-label="关闭购物清单">×</button></div>
+      <p id="shoppingSummary" class="modal-desc"></p>
+      <ul id="shoppingList" class="shopping-list" aria-live="polite"></ul>
+      <div class="btn-row"><button id="btnCopyShoppingList" class="btn-secondary" type="button">复制清单</button><button class="btn-primary" data-close="shoppingModal">完成</button></div>
+    </section>
   </div>
 
   <div id="petDetailModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="petDetailTitle">

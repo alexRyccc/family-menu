@@ -18,18 +18,24 @@
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
     voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), pendingPeople: $('#pendingPeople'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus'),
     repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
-    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'), notesWeekSummary: $('#notesWeekSummary'),
-    petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus'), petCareTypeFilter: $('#petCareTypeFilter'), petDetailContent: $('#petDetailContent'),
-    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), galleryContent: $('#galleryContent')
+    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'), notesWeekSummary: $('#notesWeekSummary'), noteIsTask: $('#noteIsTask'), noteDueDate: $('#noteDueDate'),
+    petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus'), petCareTypeFilter: $('#petCareTypeFilter'), petDetailContent: $('#petDetailContent'), petRecordClinic: $('#petRecordClinic'), petRecordMedication: $('#petRecordMedication'), petRecordWeight: $('#petRecordWeight'), petRecordInterval: $('#petRecordInterval'), petRecordAttachment: $('#petRecordAttachment'),
+    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), homeTimeline: $('#homeTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
   const petCareTypes = {
     vaccine: { label: '疫苗', schedule: 365 }, internal_deworming: { label: '体内驱虫', schedule: 90 }, external_deworming: { label: '体外驱虫', schedule: 30 }, bath: { label: '洗澡护理', schedule: 30 }, nail_trim: { label: '剪指甲', schedule: 21 }, health_check: { label: '健康检查', schedule: 180 }, vet_visit: { label: '就诊用药' }, weight: { label: '体重记录' }
   };
+  const preferenceOptions = [
+    { id: 'no_spicy', label: '不吃辣', icon: '🌶️', keywords: ['辣', '麻辣', '剁椒', '香锅', '火锅'] },
+    { id: 'no_cilantro', label: '不要香菜', icon: '🌿', keywords: ['香菜'] },
+    { id: 'no_seafood', label: '不吃海鲜', icon: '🦐', keywords: ['虾', '鱼', '蟹', '贝', '海鲜'] },
+    { id: 'light', label: '减脂优先', icon: '🥗', keywords: ['红烧', '炸', '肥', '奶茶', '甜品', '糖醋'] }
+  ];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteSummary: null, justAddedNoteId: null, pets: [], petRecords: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], recommendationFilter: 'all', recommendationRegion: 'all', mapRecommendationId: null
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteSummary: null, justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', mapRecommendationId: null, preferences: [], homeDashboard: null, homeEvents: []
   };
   let toastTimer;
   let lastFocus = null;
@@ -126,6 +132,7 @@
     dom.recommendationsView.classList.toggle('hidden', view !== 'recommendations');
     dom.stepBar.classList.toggle('hidden', view !== 'menu' || state.currentStep === 1);
     $('#topbarContext').textContent = view === 'notes' ? '猫家记事本' : view === 'pets' ? '猫咪清单' : view === 'recommendations' ? '推荐清单' : '猫家点菜';
+    if (view === 'home') loadHomeData().catch(error => toast(error.message, 'error'));
     if (view === 'notes') {
       renderNoteForm();
       loadSharedNotes().catch(error => toast(error.message, 'error'));
@@ -133,6 +140,94 @@
     if (view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(error => toast(error.message, 'error'));
     if (view === 'recommendations') loadRecommendationData().catch(error => toast(error.message, 'error'));
     window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+
+  function timelineIcon(kind) {
+    return { meal: '🍚', note: '✦', pet: '🐾', checkin: '📍' }[kind] || '•';
+  }
+
+  function renderHomeData() {
+    const dashboard = state.homeDashboard;
+    if (!dashboard) return;
+    const meals = Object.fromEntries((dashboard.meals || []).map(item => [item.meal, item.count]));
+    const todoGroups = [
+      { icon: '🍚', title: '未选餐', count: Math.max(0, state.users.length * 2 - (meals.lunch || 0) - (meals.dinner || 0)), detail: '今天还有餐别待选择' },
+      { icon: '@', title: '待办与提醒', count: (dashboard.tasks || []).length + (dashboard.mentions || []).length, detail: dashboard.tasks?.[0]?.content || dashboard.mentions?.[0]?.content || '暂时没有新提醒' },
+      { icon: '🐾', title: '临近护理', count: (dashboard.pet_tasks || []).length, detail: dashboard.pet_tasks?.[0] ? `${dashboard.pet_tasks[0].pet_name} · ${careLabel(dashboard.pet_tasks[0].care_type)}` : '近期没有安排' },
+      { icon: '📍', title: '待打卡地点', count: (dashboard.want_to_visit || []).length, detail: dashboard.want_to_visit?.[0]?.title || '暂时没有想去清单' }
+    ];
+    dom.homeTodos.innerHTML = todoGroups.map(item => `<button type="button" class="home-todo" data-home-jump="${item.title}"><span>${item.icon}</span><b>${item.count}</b><strong>${item.title}</strong><small>${esc(item.detail)}</small></button>`).join('');
+    dom.homeTimeline.innerHTML = state.homeEvents.map(item => `<article class="home-timeline-entry"><span>${timelineIcon(item.kind)}</span><div><strong>${esc(item.title)}</strong><p>${esc(item.actor_name || '家人')} · ${esc(item.detail || '')}</p></div><time>${esc(String(item.happened_at || '').slice(5, 16))}</time></article>`).join('') || '<div class="notes-empty"><strong>家庭时间线刚刚开始</strong><span>点一次菜、记一件事或登记护理后，会在这里留下痕迹。</span></div>';
+  }
+
+  async function loadHomeData() {
+    const userQuery = state.me?.id ? `?user_id=${state.me.id}` : '';
+    const [dashboard, events] = await Promise.all([api(`/api/home-dashboard${userQuery}`), api('/api/family-timeline?limit=18')]);
+    state.homeDashboard = dashboard;
+    state.homeEvents = events;
+    renderHomeData();
+  }
+
+  function preferenceById(id) { return preferenceOptions.find(item => item.id === id); }
+
+  function renderPreferenceBar() {
+    if (!dom.preferenceBar) return;
+    const selected = state.preferences.map(preferenceById).filter(Boolean);
+    dom.preferenceBar.innerHTML = `<div><span class="preference-kicker">${state.me ? `${esc(state.me.name)}的口味` : '我的口味'}</span><strong>${selected.length ? selected.map(item => `${item.icon} ${item.label}`).join(' · ') : '还没有设置忌口或偏好'}</strong></div><div><button id="btnOpenPreferences" type="button">调整偏好</button><button id="btnOpenShopping" type="button">购物清单</button></div>`;
+  }
+
+  function renderPreferencePicker() {
+    dom.preferencePicker.innerHTML = preferenceOptions.map(item => `<label class="preference-option"><input type="checkbox" value="${item.id}" ${state.preferences.includes(item.id) ? 'checked' : ''}><span>${item.icon}</span><b>${item.label}</b></label>`).join('');
+  }
+
+  async function loadPreferences() {
+    if (!state.me) { state.preferences = []; renderPreferenceBar(); return; }
+    const result = await api(`/api/users/${state.me.id}/preferences`);
+    state.preferences = Array.isArray(result.tags) ? result.tags : [];
+    renderPreferenceBar();
+  }
+
+  function openPreferences() {
+    if (!state.me) return toast('请先选择家人，再设置口味偏好', 'error');
+    renderPreferencePicker();
+    openModal('preferencesModal');
+  }
+
+  async function savePreferences() {
+    if (!state.me) return;
+    const tags = $$('#preferencePicker input:checked').map(input => input.value);
+    await api(`/api/users/${state.me.id}/preferences`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tags }) });
+    state.preferences = tags;
+    renderPreferenceBar();
+    renderDishes();
+    closeModal('preferencesModal');
+    toast('口味偏好已保存，菜品列表已按此过滤', 'success');
+  }
+
+  function dishMatchesPreferences(dish) {
+    if (!state.preferences.length) return true;
+    const source = `${dish.name || ''} ${dish.description || ''} ${dish.category || ''}`.toLowerCase();
+    return !state.preferences.some(id => preferenceById(id)?.keywords.some(keyword => source.includes(keyword)));
+  }
+
+  async function openShoppingList() {
+    dom.shoppingSummary.textContent = '正在合并已选菜品的食材…';
+    dom.shoppingList.innerHTML = '';
+    openModal('shoppingModal');
+    const list = await api(`/api/shopping-list?date=${encodeURIComponent(state.date)}`);
+    dom.shoppingSummary.textContent = list.dishes.length ? `${dateLabel(list.date)} · ${list.dishes.join('、')}` : `${dateLabel(list.date)} 还没有选菜`;
+    dom.shoppingList.innerHTML = list.items.length
+      ? list.items.map(item => `<li><b>${esc(item.name)}</b><span>${esc(item.quantity)}</span><small>${esc(item.dishes.join('、'))}</small></li>`).join('')
+      : '<li class="shopping-empty">选完菜后，这里会自动合并食谱食材。</li>';
+  }
+
+  async function copyDailyShoppingList() {
+    const rows = $$('#shoppingList li:not(.shopping-empty)').map(item => `${item.querySelector('b')?.textContent || ''} ${item.querySelector('span')?.textContent || ''}`.trim());
+    if (!rows.length) return toast('今天还没有可复制的食材', 'info');
+    const text = `猫家购物清单 · ${dateLabel(state.date)}\n${rows.map(row => `- ${row}`).join('\n')}`;
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+    else window.prompt('复制购物清单', text);
+    toast('购物清单已复制', 'success');
   }
 
   function renderNoteForm() {
@@ -152,7 +247,9 @@
       date: dom.noteDate.value || today(),
       authorId: Number(dom.noteAuthor.value) || null,
       content: dom.noteContent.value.slice(0, 1000),
-      mentions: $$('#mentionPicker input:checked').map(input => Number(input.value))
+      mentions: $$('#mentionPicker input:checked').map(input => Number(input.value)),
+      isTask: dom.noteIsTask.checked,
+      dueDate: dom.noteDueDate.value
     };
     localStorage.setItem('fm_note_draft', JSON.stringify(draft));
   }
@@ -165,6 +262,9 @@
     if (draft?.authorId && state.users.some(user => user.id === draft.authorId)) dom.noteAuthor.value = String(draft.authorId);
     renderNoteForm();
     dom.noteContent.value = typeof draft?.content === 'string' ? draft.content.slice(0, 1000) : '';
+    dom.noteIsTask.checked = Boolean(draft?.isTask);
+    dom.noteDueDate.disabled = !dom.noteIsTask.checked;
+    dom.noteDueDate.value = draft?.dueDate || '';
     const mentions = new Set(Array.isArray(draft?.mentions) ? draft.mentions : []);
     $$('#mentionPicker input').forEach(input => { input.checked = mentions.has(Number(input.value)); });
     updateNoteCount();
@@ -192,8 +292,11 @@
       const content = esc(note.content).replace(/\n/g, '<br>');
       const canDelete = Number(dom.noteAuthor.value) === note.author_id;
       const pin = canDelete ? `<button class="note-pin ${note.pinned ? 'is-pinned' : ''}" type="button" data-pin-note="${note.id}" aria-pressed="${note.pinned ? 'true' : 'false'}" title="${note.pinned ? '取消固定' : '固定在当天顶部'}">固定</button>` : '';
+      const task = note.is_task ? `<button class="note-task-toggle ${note.task_done ? 'is-done' : ''}" type="button" data-toggle-task="${note.id}" aria-pressed="${note.task_done ? 'true' : 'false'}">${note.task_done ? '已完成' : '完成待办'}</button>` : '';
+      const due = note.is_task && note.due_date ? `<span class="note-due ${note.task_done ? '' : note.due_date < today() ? 'is-overdue' : ''}">截止 ${esc(note.due_date)}</span>` : '';
+      const readState = note.mentions?.length ? `<small class="note-read-state">@ 已读 ${note.read_user_ids?.length || 0}/${note.mentions.length}</small>` : '';
       const remove = canDelete ? `<button class="note-delete" type="button" data-delete-note="${note.id}" title="删除这条记录" aria-label="删除 ${esc(note.author_name)} 的这条记录">×</button>` : '';
-      return `<article class="note-entry ${note.pinned ? 'note-pinned' : ''} ${note.id === state.justAddedNoteId ? 'note-just-added' : ''}"><div class="note-author"><span style="background:${esc(note.author_color)}">${esc(note.author_avatar)}</span><strong>${esc(note.author_name)}</strong>${note.pinned ? '<em>固定</em>' : ''}<time>${esc(String(note.created_at || '').slice(11, 16))}</time><button class="note-copy" type="button" data-copy-note="${note.id}" title="复制这条记录" aria-label="复制 ${esc(note.author_name)} 的这条记录">⧉</button>${pin}${remove}</div><p>${content}</p>${mentions}</article>`;
+      return `<article class="note-entry ${note.task_done ? 'note-task-done' : ''} ${note.pinned ? 'note-pinned' : ''} ${note.id === state.justAddedNoteId ? 'note-just-added' : ''}"><div class="note-author"><span style="background:${esc(note.author_color)}">${esc(note.author_avatar)}</span><strong>${esc(note.author_name)}</strong>${note.pinned ? '<em>固定</em>' : ''}<time>${esc(String(note.created_at || '').slice(11, 16))}</time><button class="note-copy" type="button" data-copy-note="${note.id}" title="复制这条记录" aria-label="复制 ${esc(note.author_name)} 的这条记录">⧉</button>${pin}${task}${remove}</div><p>${content}</p>${due}${mentions}${readState}</article>`;
     }).join('');
   }
 
@@ -216,6 +319,8 @@
       state.noteSummary = summary;
       renderSharedNotes();
       renderNoteSummary();
+      const unreadMentionIds = state.me ? state.notes.filter(note => note.mentions?.some(user => user.id === state.me.id) && !note.read_user_ids?.includes(state.me.id)).map(note => note.id) : [];
+      if (unreadMentionIds.length) api('/api/shared-notes/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id, note_ids: unreadMentionIds }) }).then(() => loadSharedNotes()).catch(() => {});
     } finally {
       dom.notesList.removeAttribute('aria-busy');
     }
@@ -232,9 +337,12 @@
     button.disabled = true;
     dom.noteSaveStatus.textContent = '正在发布...';
     try {
-      const created = await api('/api/shared-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, note_date: noteDate, content, mention_user_ids: mentionUserIds }) });
+      const created = await api('/api/shared-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, note_date: noteDate, content, mention_user_ids: mentionUserIds, is_task: dom.noteIsTask.checked, due_date: dom.noteDueDate.value }) });
       state.justAddedNoteId = created.id;
       dom.noteContent.value = '';
+      dom.noteIsTask.checked = false;
+      dom.noteDueDate.value = '';
+      dom.noteDueDate.disabled = true;
       $$('#mentionPicker input').forEach(input => { input.checked = false; });
       localStorage.removeItem('fm_note_draft');
       updateNoteCount();
@@ -263,6 +371,14 @@
     await api(`/api/shared-notes/${noteId}/pin`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, pinned: !note.pinned }) });
     await loadSharedNotes();
     toast(note.pinned ? '已取消固定' : '已固定在当天顶部', 'success');
+  }
+
+  async function toggleNoteTask(noteId) {
+    const note = state.notes.find(item => item.id === noteId);
+    if (!note || !state.me) return toast('请先选择家人', 'error');
+    await api(`/api/shared-notes/${noteId}/task`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id, done: !note.task_done }) });
+    await loadSharedNotes();
+    toast(note.task_done ? '待办已恢复' : '待办已完成', 'success');
   }
 
   function exportCurrentNotes() {
@@ -377,7 +493,7 @@
       dom.petRecords.innerHTML = '<div class="notes-empty"><strong>还没有护理记录</strong><span>从疫苗、驱虫或洗澡开始登记吧。</span></div>';
       return;
     }
-    dom.petRecords.innerHTML = visibleRecords.map(record => `<article class="pet-record"><span class="pet-record-avatar" style="background:${esc(record.pet_color)}">${petAvatar({ name: record.pet_name, avatar: record.pet_avatar }, 'pet-record-avatar')}</span><div class="pet-record-body"><div><strong>${esc(record.pet_name)}${record.pet_gender ? ` · ${esc(record.pet_gender)}` : ''}</strong><span class="pet-record-type">${esc(careLabel(record.care_type))}</span><time>${esc(record.care_date)}</time></div>${record.note ? `<p>${esc(record.note)}</p>` : ''}<small>${record.author_name ? `${esc(record.author_avatar || '')} ${esc(record.author_name)} 记录` : '家人记录'}</small></div></article>`).join('');
+    dom.petRecords.innerHTML = visibleRecords.map(record => `<article class="pet-record"><span class="pet-record-avatar" style="background:${esc(record.pet_color)}">${petAvatar({ name: record.pet_name, avatar: record.pet_avatar }, 'pet-record-avatar')}</span><div class="pet-record-body"><div><strong>${esc(record.pet_name)}${record.pet_gender ? ` · ${esc(record.pet_gender)}` : ''}</strong><span class="pet-record-type">${esc(careLabel(record.care_type))}</span><time>${esc(record.care_date)}</time></div>${record.note ? `<p>${esc(record.note)}</p>` : ''}${record.clinic || record.medication || record.weight_kg ? `<p class="pet-medical-meta">${record.clinic ? `🏥 ${esc(record.clinic)}` : ''}${record.medication ? ` · 💊 ${esc(record.medication)}` : ''}${record.weight_kg ? ` · ${esc(record.weight_kg)}kg` : ''}</p>` : ''}${record.attachment_path ? `<a class="pet-attachment" href="${esc(record.attachment_path)}" target="_blank" rel="noopener">查看病历图片</a>` : ''}<small>${record.author_name ? `${esc(record.author_avatar || '')} ${esc(record.author_name)} 记录` : '家人记录'}</small></div></article>`).join('');
   }
 
   function renderPetCareFilter() {
@@ -389,10 +505,14 @@
     const pet = state.pets.find(item => item.id === petId);
     if (!pet) return;
     state.selectedPetId = petId;
-    const recent = state.petRecords.filter(record => record.pet_id === petId).slice(0, 5);
+    const allRecords = state.petRecords.filter(record => record.pet_id === petId);
+    const recent = allRecords.slice(0, 5);
+    const weights = allRecords.filter(record => Number(record.weight_kg) > 0).slice(0, 8).reverse();
     const nextAction = Object.keys(petCareTypes).map(type => ({ type, days: careDaysRemaining(type, pet.latest?.[type]) })).filter(item => item.days !== null).sort((a, b) => a.days - b.days)[0];
     $('#petDetailTitle').textContent = `${pet.name}的护理档案`;
-    dom.petDetailContent.innerHTML = `<div class="pet-detail-hero"><span class="pet-detail-avatar" style="background:${esc(pet.color)}">${petAvatar(pet, 'pet-detail-avatar')}</span><div><strong>${esc(pet.name)}</strong><span>${esc(pet.gender || '未标注性别')}</span><p>${nextAction ? `${careLabel(nextAction.type)}${nextAction.days <= 0 ? '建议现在安排' : `还有 ${nextAction.days} 天`}` : '还没有可计算的护理周期'}</p></div></div><div class="pet-detail-metrics"><span>已记录 <b>${state.petRecords.filter(record => record.pet_id === petId).length}</b> 次</span><span>体重记录 <b>${state.petRecords.filter(record => record.pet_id === petId && record.care_type === 'weight').length}</b> 次</span></div><ol class="pet-detail-timeline">${recent.map(record => `<li><time>${esc(record.care_date)}</time><div><b>${esc(careLabel(record.care_type))}</b><p>${esc(record.note || '已完成登记')}</p></div></li>`).join('') || '<li><div><b>尚无护理记录</b><p>先登记一项护理，时间线会一直保留。</p></div></li>'}</ol>`;
+    const weightChart = weights.length > 1 ? `<div class="weight-chart"><p>体重曲线</p><svg viewBox="0 0 240 72" role="img" aria-label="${pet.name}体重曲线"><polyline points="${weights.map((record, index) => `${index * (240 / (weights.length - 1))},${64 - ((Number(record.weight_kg) - Math.min(...weights.map(item => Number(item.weight_kg)))) / Math.max(.1, Math.max(...weights.map(item => Number(item.weight_kg))) - Math.min(...weights.map(item => Number(item.weight_kg))))) * 48}`).join(' ')}" fill="none" stroke="#d16a4f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><small>${weights.map(item => `${item.weight_kg}kg`).join(' · ')}</small></div>` : '<div class="weight-chart empty"><p>体重曲线</p><small>至少登记两次体重后显示趋势。</small></div>';
+    const upcoming = state.petTasks.filter(task => task.pet_id === petId).slice(0, 3);
+    dom.petDetailContent.innerHTML = `<div class="pet-detail-hero"><span class="pet-detail-avatar" style="background:${esc(pet.color)}">${petAvatar(pet, 'pet-detail-avatar')}</span><div><strong>${esc(pet.name)}</strong><span>${esc(pet.gender || '未标注性别')}</span><p>${nextAction ? `${careLabel(nextAction.type)}${nextAction.days <= 0 ? '建议现在安排' : `还有 ${nextAction.days} 天`}` : '还没有可计算的护理周期'}</p></div></div><div class="pet-detail-metrics"><span>已记录 <b>${allRecords.length}</b> 次</span><span>体重记录 <b>${weights.length}</b> 次</span></div>${weightChart}<div class="pet-upcoming"><b>自动生成的下次护理</b>${upcoming.map(task => `<span>${esc(task.due_date)} · ${esc(careLabel(task.care_type))}</span>`).join('') || '<span>登记带周期的护理后，会自动出现在这里。</span>'}</div><ol class="pet-detail-timeline">${recent.map(record => `<li><time>${esc(record.care_date)}</time><div><b>${esc(careLabel(record.care_type))}</b><p>${esc(record.note || '已完成登记')}</p></div></li>`).join('') || '<li><div><b>尚无护理记录</b><p>先登记一项护理，时间线会一直保留。</p></div></li>'}</ol>`;
     openModal('petDetailModal');
   }
 
@@ -405,11 +525,18 @@
   async function loadPetRecords() {
     dom.petRecords.setAttribute('aria-busy', 'true');
     try {
-      state.petRecords = await api('/api/pet-care-records');
+      const [records, tasks, templates] = await Promise.all([api('/api/pet-care-records'), api('/api/pet-care-tasks?days=30'), api('/api/pet-care-templates')]);
+      state.petRecords = records;
+      state.petTasks = tasks;
+      state.petTemplates = templates;
       renderPetRecords();
     } finally {
       dom.petRecords.removeAttribute('aria-busy');
     }
+  }
+
+  function petTemplateInterval(petId, careType) {
+    return state.petTemplates.find(item => item.pet_id === petId && item.care_type === careType)?.interval_days || petCareTypes[careType]?.schedule || '';
   }
 
   function renderPetRecordForm() {
@@ -423,6 +550,7 @@
     dom.petRecordType.value = previousType;
     if (previousAuthor && state.users.some(user => user.id === previousAuthor)) dom.petRecordAuthor.value = String(previousAuthor);
     if (!dom.petRecordDate.value) dom.petRecordDate.value = today();
+    dom.petRecordInterval.value = String(petTemplateInterval(Number(dom.petRecordPet.value), dom.petRecordType.value));
     updatePetRecordCount();
   }
 
@@ -433,6 +561,11 @@
   function openPetRecordForm() {
     renderPetRecordForm();
     dom.petRecordStatus.textContent = '';
+    dom.petRecordClinic.value = '';
+    dom.petRecordMedication.value = '';
+    dom.petRecordWeight.value = '';
+    dom.petRecordInterval.value = String(petCareTypes[dom.petRecordType.value]?.schedule || '');
+    dom.petRecordAttachment.value = '';
     openModal('petRecordModal');
   }
 
@@ -445,7 +578,18 @@
     button.disabled = true;
     dom.petRecordStatus.textContent = '正在保存...';
     try {
-      await api('/api/pet-care-records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pet_id: petId, care_type: careType, care_date: careDate, note: dom.petRecordNote.value, created_by: Number(dom.petRecordAuthor.value) || null }) });
+      const interval = Number(dom.petRecordInterval.value);
+      if (interval) await api('/api/pet-care-templates', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pet_id: petId, care_type: careType, interval_days: interval, clinic: dom.petRecordClinic.value, medication: dom.petRecordMedication.value }) });
+      let attachmentPath = '';
+      if (dom.petRecordAttachment.files?.[0]) {
+        const form = new FormData();
+        form.append('attachment', dom.petRecordAttachment.files[0]);
+        const response = await fetch('/api/pet-care-attachments', { method: 'POST', body: form });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || '病历图片上传失败');
+        attachmentPath = result.path;
+      }
+      await api('/api/pet-care-records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pet_id: petId, care_type: careType, care_date: careDate, note: dom.petRecordNote.value, clinic: dom.petRecordClinic.value, medication: dom.petRecordMedication.value, weight_kg: dom.petRecordWeight.value, attachment_path: attachmentPath, created_by: Number(dom.petRecordAuthor.value) || null }) });
       dom.petRecordNote.value = '';
       updatePetRecordCount();
       await Promise.all([loadPets(), loadPetRecords()]);
@@ -500,7 +644,12 @@
   }
 
   function renderRecommendations() {
-    const visible = state.savedRecommendations.filter(item => (state.recommendationFilter === 'all' || item.kind === state.recommendationFilter) && (state.recommendationRegion === 'all' || item.region === state.recommendationRegion));
+    const visible = state.savedRecommendations.filter(item => {
+      const year = String(item.visited_label || item.created_at || '').slice(0, 4);
+      return (state.recommendationFilter === 'all' || item.kind === state.recommendationFilter)
+        && (state.recommendationRegion === 'all' || item.region === state.recommendationRegion)
+        && (state.recommendationYear === 'all' || year === state.recommendationYear);
+    });
     const located = state.savedRecommendations.filter(hasCoordinates).length;
     const travelCities = state.savedRecommendations.filter(item => item.travel_key).length;
     const checkinCities = new Set(state.checkins.map(item => item.region).filter(Boolean)).size;
@@ -510,7 +659,12 @@
       const mapButton = hasCoordinates(item) ? `<button type="button" data-show-recommendation="${item.id}">地图查看</button>` : '';
       const gallery = Array.isArray(item.images) && item.images.length ? `<button class="recommendation-gallery" type="button" data-open-gallery="${item.id}" aria-label="查看${esc(item.title)}的${item.images.length}张城市图片">${item.images.slice(0, 3).map(image => `<img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}" loading="lazy" decoding="async">`).join('')}</button>` : '';
       const date = item.visited_label || String(item.created_at || '').slice(0, 10);
-      return `<article class="recommendation-card ${item.travel_key ? 'travel-city-card' : ''}">${gallery}<div class="recommendation-card-top"><span class="recommendation-kind recommendation-kind-${esc(item.kind)}">${type.icon} ${esc(type.label)}</span><time>${esc(date)}</time></div><h3>${esc(item.title)}</h3><p class="recommendation-location">${esc(locationText(item))}</p>${item.description ? `<p class="recommendation-description">${esc(item.description)}</p>` : ''}<div class="recommendation-card-footer"><small>${item.travel_key ? `${esc(item.region)} · 城市足迹` : item.author_name ? `${esc(item.author_avatar || '')} ${esc(item.author_name)} 推荐` : '家人推荐'}${item.checkin_count ? ` · ${item.checkin_count} 次打卡` : ''}</small><div>${mapButton}<button type="button" data-checkin-recommendation="${item.id}">去打卡</button></div></div></article>`;
+      let tags = [];
+      try { tags = Array.isArray(item.tags) ? item.tags : JSON.parse(item.tags || '[]'); } catch (_) { tags = []; }
+      const stars = Number(item.rating) ? `<span class="recommendation-stars" aria-label="${Number(item.rating)} 星">${'★'.repeat(Number(item.rating))}${'☆'.repeat(5 - Number(item.rating))}</span>` : '';
+      const tagsHtml = tags.length ? `<div class="recommendation-tags">${tags.map(tag => `<span>${esc(tag)}</span>`).join('')}</div>` : '';
+      const status = item.visit_status === 'visited' ? '去过' : '想去';
+      return `<article class="recommendation-card ${item.travel_key ? 'travel-city-card' : ''}">${gallery}<div class="recommendation-card-top"><span class="recommendation-kind recommendation-kind-${esc(item.kind)}">${type.icon} ${esc(type.label)}</span><time>${esc(date)}</time></div><h3>${esc(item.title)}</h3><p class="recommendation-location">${esc(locationText(item))}</p><div class="recommendation-meta"><span class="recommendation-status is-${esc(item.visit_status || 'want')}">${status}</span>${stars}</div>${tagsHtml}${item.description ? `<p class="recommendation-description">${esc(item.description)}</p>` : ''}${item.revisit_reason ? `<p class="recommendation-revisit">下次：${esc(item.revisit_reason)}</p>` : ''}<div class="recommendation-card-footer"><small>${item.travel_key ? `${esc(item.region)} · 城市足迹` : item.author_name ? `${esc(item.author_avatar || '')} ${esc(item.author_name)} 推荐` : '家人推荐'}${item.checkin_count ? ` · ${item.checkin_count} 次打卡` : ''}</small><div>${mapButton}${item.travel_key ? `<button type="button" data-memory-card="${item.id}">回忆卡</button>` : ''}<button type="button" data-checkin-recommendation="${item.id}">去打卡</button></div></div></article>`;
     }).join('') || '<div class="notes-empty"><strong>还没有推荐</strong><span>把一家人觉得值得的地点、商家和商品先存下来。</span></div>';
     const target = state.savedRecommendations.find(item => item.id === state.mapRecommendationId) || state.savedRecommendations.find(hasCoordinates);
     setMapTarget(target, target?.title);
@@ -519,6 +673,8 @@
   function renderRecommendationRegions() {
     const regions = [...new Set(state.savedRecommendations.map(item => item.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
     dom.recommendationRegionFilter.innerHTML = `<button type="button" data-recommendation-region="all" aria-pressed="${state.recommendationRegion === 'all'}">全部地区</button>${regions.map(region => `<button type="button" data-recommendation-region="${esc(region)}" aria-pressed="${state.recommendationRegion === region}">${esc(region)}</button>`).join('')}`;
+    const years = [...new Set(state.savedRecommendations.filter(item => item.travel_key).map(item => String(item.visited_label || item.created_at || '').slice(0, 4)).filter(year => /^\d{4}$/.test(year)))].sort().reverse();
+    dom.recommendationYearFilter.innerHTML = years.length ? `<span>旅行年份</span><button type="button" data-recommendation-year="all" aria-pressed="${state.recommendationYear === 'all'}">全部</button>${years.map(year => `<button type="button" data-recommendation-year="${year}" aria-pressed="${state.recommendationYear === year}">${year}</button>`).join('')}` : '';
   }
 
   function openGallery(recommendationId) {
@@ -526,6 +682,15 @@
     if (!item?.images?.length) return;
     $('#galleryTitle').textContent = `${item.title}的城市图册`;
     dom.galleryContent.innerHTML = `<p>${esc(item.description || locationText(item))}</p><div class="gallery-grid">${item.images.map(image => `<figure><img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}"><figcaption>${esc(image.caption || item.title)}</figcaption></figure>`).join('')}</div>`;
+    openModal('galleryModal');
+  }
+
+  function openMemoryCard(recommendationId) {
+    const item = state.savedRecommendations.find(record => record.id === recommendationId);
+    if (!item) return;
+    $('#galleryTitle').textContent = `${item.title} · 旅行回忆`;
+    const hero = item.images?.[0];
+    dom.galleryContent.innerHTML = `<article class="memory-card">${hero ? `<img src="${esc(hero.image_path)}" alt="${esc(hero.caption || item.title)}">` : ''}<p class="memory-card-date">${esc(item.visited_label || String(item.created_at || '').slice(0, 10))}</p><h3>${esc(item.title)}</h3><p>${esc(item.description || locationText(item))}</p><small>${esc(item.region || '旅行足迹')} · 猫家的共同记忆</small></article>`;
     openModal('galleryModal');
   }
 
@@ -553,6 +718,10 @@
     dom.recommendationLatitude.value = '';
     dom.recommendationLongitude.value = '';
     dom.recommendationDescription.value = '';
+    dom.recommendationVisitStatus.value = 'want';
+    dom.recommendationRating.value = '0';
+    dom.recommendationTags.value = '';
+    dom.recommendationRevisitReason.value = '';
     dom.recommendationSaveStatus.textContent = '';
     openModal('recommendationModal');
   }
@@ -598,7 +767,8 @@
     button.disabled = true;
     dom.recommendationSaveStatus.textContent = '正在保存...';
     try {
-      const record = await api('/api/family-recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: dom.recommendationTitle.value, kind: dom.recommendationKind.value, created_by: Number(dom.recommendationAuthor.value) || null, region: dom.recommendationRegion.value, address: dom.recommendationAddress.value, latitude: dom.recommendationLatitude.value, longitude: dom.recommendationLongitude.value, description: dom.recommendationDescription.value }) });
+      const tags = dom.recommendationTags.value.split(/[,，]/).map(item => item.trim()).filter(Boolean).slice(0, 12);
+      const record = await api('/api/family-recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: dom.recommendationTitle.value, kind: dom.recommendationKind.value, created_by: Number(dom.recommendationAuthor.value) || null, region: dom.recommendationRegion.value, address: dom.recommendationAddress.value, latitude: dom.recommendationLatitude.value, longitude: dom.recommendationLongitude.value, description: dom.recommendationDescription.value, visit_status: dom.recommendationVisitStatus.value, rating: Number(dom.recommendationRating.value), tags, revisit_reason: dom.recommendationRevisitReason.value }) });
       closeModal('recommendationModal');
       await loadRecommendationData();
       setMapTarget(record, record.title);
@@ -677,6 +847,7 @@
 
   function renderDishes() {
     let dishes = state.onlyFavorites ? state.dishes.filter(dish => state.favorites.has(dish.id)) : [...state.dishes];
+    dishes = dishes.filter(dishMatchesPreferences);
     const frequentIds = new Set(state.recommendations.frequent.map(dish => dish.id));
     const neverIds = new Set(state.recommendations.never.map(dish => dish.id));
     if (state.avoidRecent) {
@@ -810,9 +981,10 @@
   async function refreshDashboard() { await Promise.all([loadPlan(), loadSelections(), loadFavorites(), loadFeed(), loadRecentSelection()]); }
 
   function chooseUser(user) {
+    if (!user) return;
     state.me = { id: user.id, name: user.name, avatar: user.avatar, color: user.color };
     localStorage.setItem('fm_me', JSON.stringify(state.me));
-    updateIdentity(); closeModal('userModal'); setStep(2); refreshDashboard().catch(error => toast(error.message, 'error'));
+    updateIdentity(); closeModal('userModal'); setStep(2); Promise.all([refreshDashboard(), loadPreferences(), loadHomeData()]).catch(error => toast(error.message, 'error'));
   }
 
   async function addUser() {
@@ -1103,7 +1275,7 @@
       if (['notification', 'dish_added', 'dish_removed', 'vote_closed', 'vote_updated'].includes(data.type)) refreshDashboard().catch(() => {});
       if (['vote_created', 'vote_updated', 'vote_closed'].includes(data.type) && !$('#votesModal').classList.contains('hidden')) showVotes().catch(() => {});
       if (data.type === 'user_added') loadUsers().catch(() => {});
-      if (data.type === 'shared_note' || data.type === 'shared_note_deleted' || data.type === 'shared_note_pinned') {
+      if (data.type === 'shared_note' || data.type === 'shared_note_deleted' || data.type === 'shared_note_pinned' || data.type === 'shared_note_task') {
         const noteDate = data.note?.note_date || data.note_date;
         if (state.view === 'notes' && noteDate === dom.noteDate.value) loadSharedNotes().catch(() => {});
         if (data.type === 'shared_note' && data.note.mention_user_ids?.includes(state.me?.id)) toast(`${data.note.author_name} 在共享记事本里 @ 了你`, 'info');
@@ -1116,6 +1288,7 @@
         if (state.view === 'recommendations') loadRecommendationData().catch(() => {});
       }
       if (data.type === 'selection_note' && state.view === 'menu' && data.date === state.date) refreshDashboard().catch(() => {});
+      if (state.view === 'home' && ['shared_note', 'shared_note_deleted', 'shared_note_pinned', 'shared_note_task', 'pet_care_record', 'recommendation', 'recommendation_checkin', 'notification'].includes(data.type)) loadHomeData().catch(() => {});
     };
     source.onerror = () => { source.close(); setConnection('offline'); clearTimeout(state.retryTimer); state.retryTimer = setTimeout(connectEvents, Math.min(1000 * 2 ** Math.min(++state.retries, 5), 30000)); };
   }
@@ -1128,6 +1301,11 @@
       if (button.id === 'btnOpenNotes') return setView('notes');
       if (button.id === 'btnOpenPets') return setView('pets');
       if (button.id === 'btnOpenRecommendations') return setView('recommendations');
+      if (button.id === 'btnRefreshHome') return loadHomeData();
+      if (button.id === 'btnOpenPreferences') return openPreferences();
+      if (button.id === 'btnSavePreferences') return savePreferences();
+      if (button.id === 'btnOpenShopping') return openShoppingList();
+      if (button.id === 'btnCopyShoppingList') return copyDailyShoppingList();
       if (button.id === 'btnHome' || button.id === 'btnNotesBack' || button.id === 'btnRecommendationsBack') return setView('home');
       if (button.id === 'btnPetsBack') return setView('home');
       if (button.id === 'btnOpenNote') return openNoteComposer();
@@ -1146,7 +1324,9 @@
       if (button.id === 'btnUseCurrentLocation') { openCheckinForm(); return useCurrentLocation('checkin'); }
       if (button.dataset.recommendationFilter) { state.recommendationFilter = button.dataset.recommendationFilter; $$('.recommendation-filter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderRecommendations(); }
       if (button.dataset.recommendationRegion) { state.recommendationRegion = button.dataset.recommendationRegion; $$('#recommendationRegionFilter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderRecommendations(); }
+      if (button.dataset.recommendationYear) { state.recommendationYear = button.dataset.recommendationYear; $$('#recommendationYearFilter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderRecommendations(); }
       if (button.dataset.openGallery) return openGallery(Number(button.dataset.openGallery));
+      if (button.dataset.memoryCard) return openMemoryCard(Number(button.dataset.memoryCard));
       if (button.dataset.showRecommendation) { const item = state.savedRecommendations.find(record => record.id === Number(button.dataset.showRecommendation)); if (!hasCoordinates(item)) return toast('这条推荐还没有坐标，可编辑后添加', 'info'); setMapTarget(item, item.title); return dom.recommendationMap.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       if (button.dataset.checkinRecommendation) return openCheckinForm(Number(button.dataset.checkinRecommendation));
       if (button.dataset.showCheckin) { const item = state.checkins.find(record => record.id === Number(button.dataset.showCheckin)); if (!hasCoordinates(item)) return toast('这次打卡没有坐标', 'info'); setMapTarget(item, item.recommendation_title || '打卡地点'); return dom.recommendationMap.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -1161,7 +1341,12 @@
       if (button.id === 'btnMentionAll') return toggleMentionAll();
       if (button.dataset.copyNote) return copySharedNote(Number(button.dataset.copyNote));
       if (button.dataset.pinNote) return togglePinnedNote(Number(button.dataset.pinNote));
+      if (button.dataset.toggleTask) return toggleNoteTask(Number(button.dataset.toggleTask));
       if (button.dataset.deleteNote) return deleteSharedNote(Number(button.dataset.deleteNote));
+      if (button.dataset.homeJump) {
+        const target = { '未选餐': 'menu', '待办与提醒': 'notes', '临近护理': 'pets', '待打卡地点': 'recommendations' }[button.dataset.homeJump];
+        if (target) return setView(target);
+      }
       if (button.dataset.userId) return chooseUser(state.users.find(user => user.id === Number(button.dataset.userId)));
       if (button.dataset.switchId) return chooseUser(state.users.find(user => user.id === Number(button.dataset.switchId)));
       if ('addUser' in button.dataset) { renderAvatarPicker(); return openModal('addUserModal'); }
@@ -1193,6 +1378,8 @@
       if (button.id === 'menuNotify') { closeModal('moreMenu'); await showNotify(); return openModal('notifyModal'); }
       if (button.id === 'menuStats') { closeModal('moreMenu'); return showStats(); }
       if (button.id === 'menuShortcuts') { closeModal('moreMenu'); return openModal('shortcutsModal'); }
+      if (button.id === 'menuPreferences') { closeModal('moreMenu'); return openPreferences(); }
+      if (button.id === 'menuShopping') { closeModal('moreMenu'); return openShoppingList(); }
       if (button.id === 'btnCreateVote') return createVote();
       if (button.id === 'btnRefreshWeekly') return showWeekly();
       if (button.id === 'btnCopyWeekly') return copyWeekly();
@@ -1231,8 +1418,12 @@
   dom.noteDate.addEventListener('change', () => { loadSharedNotes().catch(error => toast(error.message, 'error')); saveNoteDraft(); });
   dom.noteAuthor.addEventListener('change', () => { renderNoteForm(); saveNoteDraft(); });
   dom.noteContent.addEventListener('input', () => { updateNoteCount(); saveNoteDraft(); });
+  dom.noteIsTask.addEventListener('change', () => { dom.noteDueDate.disabled = !dom.noteIsTask.checked; if (!dom.noteIsTask.checked) dom.noteDueDate.value = ''; saveNoteDraft(); });
   dom.mentionPicker.addEventListener('change', saveNoteDraft);
   dom.petRecordNote.addEventListener('input', updatePetRecordCount);
+  const refreshPetInterval = () => { dom.petRecordInterval.value = String(petTemplateInterval(Number(dom.petRecordPet.value), dom.petRecordType.value)); };
+  dom.petRecordType.addEventListener('change', refreshPetInterval);
+  dom.petRecordPet.addEventListener('change', refreshPetInterval);
   dom.noteFilter.addEventListener('input', () => { state.noteFilter = dom.noteFilter.value; renderSharedNotes(); });
   document.addEventListener('change', event => {
     const ingredient = event.target.closest('input[data-ingredient-index]');
@@ -1279,7 +1470,7 @@
     try {
       dom.whoError.classList.add('hidden');
       await Promise.all([loadUsers(), loadCategories(), loadFeed(), loadRecommendations()]);
-      if (state.me) { updateIdentity(); setStep(2); await refreshDashboard(); } else setStep(1);
+      if (state.me) { updateIdentity(); setStep(2); await Promise.all([refreshDashboard(), loadPreferences()]); } else { setStep(1); renderPreferenceBar(); }
       connectEvents();
       setView('home');
     } catch (error) { dom.whoError.classList.remove('hidden'); toast(error.message, 'error'); }
