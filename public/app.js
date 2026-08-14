@@ -1019,6 +1019,7 @@
       if (button.id === 'btnPetsBack') return setView('menu');
       if (button.id === 'btnOpenNote') return openNoteComposer();
       if (button.id === 'btnCreateNote') return createSharedNote();
+      if (button.id === 'btnOpenPetsFromMenu') return setView('pets');
       if (button.id === 'btnOpenPetRecord') return openPetRecordForm();
       if (button.id === 'btnSavePetRecord') return createPetRecord();
       if (button.id === 'btnOpenRecommendation') return openRecommendationForm();
