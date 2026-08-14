@@ -29,6 +29,11 @@
           <span class="home-choice-copy"><strong>猫家记事本</strong><small>按日期记录，也可以提醒家人</small></span>
           <span class="home-choice-arrow" aria-hidden="true">→</span>
         </button>
+        <button id="btnOpenPets" class="home-choice home-choice-pets" type="button">
+          <span class="home-choice-icon" aria-hidden="true">🐾</span>
+          <span class="home-choice-copy"><strong>猫咪清单</strong><small>护理日期、健康记录和日常照护</small></span>
+          <span class="home-choice-arrow" aria-hidden="true">→</span>
+        </button>
       </div>
       <p class="home-footnote">一家人的小安排，随手记下来。</p>
     </div>
@@ -198,6 +203,30 @@
     </div>
   </section>
 
+  <section id="petsView" class="pets-view hidden" aria-labelledby="petsTitle">
+    <div class="pets-shell">
+      <header class="pets-heading">
+        <div>
+          <p class="notes-kicker">CAT CARE</p>
+          <h1 id="petsTitle">猫咪清单</h1>
+          <p>妹妹、giao 和咩咩的每次护理，都留在这里。</p>
+        </div>
+        <div class="pets-heading-actions">
+          <button id="btnPetsBack" class="notes-back" type="button">← 返回主页</button>
+          <button id="btnOpenPetRecord" class="btn-primary pet-record-create" type="button">登记护理</button>
+        </div>
+      </header>
+      <section aria-labelledby="petOverviewTitle">
+        <div class="pets-section-heading"><div><p class="notes-kicker">OVERVIEW</p><h2 id="petOverviewTitle">最近照护</h2></div><span>点击登记，留存一条新记录</span></div>
+        <div id="petGrid" class="pet-grid"></div>
+      </section>
+      <section class="pet-history-section" aria-labelledby="petHistoryTitle">
+        <div class="pets-section-heading"><div><p class="notes-kicker">HISTORY</p><h2 id="petHistoryTitle">护理时间线</h2></div><span id="petRecordCount" aria-live="polite"></span></div>
+        <div id="petRecords" class="pet-records" aria-live="polite"></div>
+      </section>
+    </div>
+  </section>
+
   <div id="noteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="noteComposerTitle">
     <section class="modal note-modal" aria-label="记录事情">
       <div class="note-composer-heading">
@@ -219,6 +248,29 @@
       <div class="note-submit-row">
         <span id="noteCount" class="note-count">0 / 1000</span>
         <button id="btnCreateNote" class="btn-primary" type="button">发布记录</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="petRecordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="petRecordTitle">
+    <section class="modal pet-record-modal" aria-label="登记猫咪护理">
+      <div class="note-composer-heading">
+        <div><p class="notes-kicker">CAT CARE</p><h2 id="petRecordTitle">登记护理</h2></div>
+        <button class="recipe-close" type="button" data-close="petRecordModal" aria-label="关闭护理登记窗口">×</button>
+      </div>
+      <p id="petRecordStatus" role="status" aria-live="polite"></p>
+      <div class="pet-record-fields">
+        <label>猫咪<select id="petRecordPet" required aria-label="选择猫咪"></select></label>
+        <label>护理项目<select id="petRecordType" required aria-label="选择护理项目"></select></label>
+        <label>日期<input id="petRecordDate" type="date" required></label>
+        <label>记录人<select id="petRecordAuthor" aria-label="记录人"></select></label>
+      </div>
+      <label class="note-content-label" for="petRecordNote">补充说明</label>
+      <textarea id="petRecordNote" rows="3" maxlength="500" placeholder="例如：体内驱虫已完成，使用了哪种药、下次注意什么。"></textarea>
+      <div class="pet-care-hint">疫苗、驱虫、洗澡、剪指甲、体检、就诊用药和体重都会永久保存。</div>
+      <div class="note-submit-row">
+        <span id="petRecordNoteCount" class="note-count">0 / 500</span>
+        <button id="btnSavePetRecord" class="btn-primary" type="button">保存记录</button>
       </div>
     </section>
   </div>

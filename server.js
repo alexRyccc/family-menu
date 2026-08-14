@@ -121,9 +121,32 @@ db.exec(`
     FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS pets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    avatar TEXT NOT NULL DEFAULT '🐱',
+    color TEXT NOT NULL DEFAULT '#d59a3a',
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS pet_care_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pet_id INTEGER NOT NULL,
+    care_type TEXT NOT NULL,
+    care_date TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY(pet_id) REFERENCES pets(id) ON DELETE RESTRICT,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+  );
+
   -- 初始化默认提醒时间
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('lunch', '10:30');
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('dinner', '16:30');
+  INSERT OR IGNORE INTO pets (name, avatar, color) VALUES ('妹妹', '🐱', '#e99b80');
+  INSERT OR IGNORE INTO pets (name, avatar, color) VALUES ('giao', '😺', '#6ca99e');
+  INSERT OR IGNORE INTO pets (name, avatar, color) VALUES ('咩咩', '😸', '#d39a54');
 
   CREATE INDEX IF NOT EXISTS idx_selections_date_meal ON selections(date, meal);
   CREATE INDEX IF NOT EXISTS idx_selections_user_meal_date ON selections(user_id, meal, date);
@@ -131,7 +154,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_vote_options_vote_id ON vote_options(vote_id);
   CREATE INDEX IF NOT EXISTS idx_vote_selections_vote_id ON vote_selections(vote_id);
   CREATE INDEX IF NOT EXISTS idx_shared_notes_date ON shared_notes(note_date DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_pet_care_records_pet_date ON pet_care_records(pet_id, care_date DESC, id DESC);
 `);
+
+// Existing selections and notes retain their author; only update this family member's visual.
+db.prepare("UPDATE users SET avatar = '🐮' WHERE name = '猫姨姨'").run();
 
 const app = express();
 app.disable('x-powered-by');
@@ -400,6 +427,70 @@ app.delete('/api/shared-notes/:id', (req, res) => {
   db.prepare('DELETE FROM shared_notes WHERE id = ?').run(noteId);
   broadcast({ type: 'shared_note_deleted', id: noteId, note_date: note.note_date });
   res.json({ ok: true });
+});
+
+// ---------- 宠物清单 API ----------
+const PET_CARE_TYPES = new Set(['vaccine', 'internal_deworming', 'external_deworming', 'bath', 'nail_trim', 'health_check', 'vet_visit', 'weight']);
+
+app.get('/api/pets', (req, res) => {
+  const pets = db.prepare('SELECT * FROM pets ORDER BY id').all();
+  const latestRows = db.prepare(
+    `SELECT r.pet_id, r.care_type, r.care_date, r.note
+     FROM pet_care_records r
+     WHERE NOT EXISTS (
+       SELECT 1 FROM pet_care_records newer
+       WHERE newer.pet_id = r.pet_id AND newer.care_type = r.care_type
+         AND (newer.care_date > r.care_date OR (newer.care_date = r.care_date AND newer.id > r.id))
+     )
+     ORDER BY r.pet_id, r.care_type`
+  ).all();
+  const latest = latestRows.reduce((all, row) => ((all[row.pet_id] ||= {})[row.care_type] = row, all), {});
+  res.json(pets.map(pet => ({ ...pet, latest: latest[pet.id] || {} })));
+});
+
+app.get('/api/pet-care-records', (req, res) => {
+  const petId = req.query.pet_id == null ? null : positiveInt(req.query.pet_id);
+  if (req.query.pet_id != null && !petId) return res.status(400).json({ error: '宠物编号无效' });
+  const limit = Math.min(300, Math.max(1, Number(req.query.limit) || 120));
+  const rows = petId
+    ? db.prepare(
+      `SELECT r.*, p.name AS pet_name, p.avatar AS pet_avatar, p.color AS pet_color,
+              u.name AS author_name, u.avatar AS author_avatar
+       FROM pet_care_records r JOIN pets p ON p.id = r.pet_id
+       LEFT JOIN users u ON u.id = r.created_by
+       WHERE r.pet_id = ? ORDER BY r.care_date DESC, r.id DESC LIMIT ?`
+    ).all(petId, limit)
+    : db.prepare(
+      `SELECT r.*, p.name AS pet_name, p.avatar AS pet_avatar, p.color AS pet_color,
+              u.name AS author_name, u.avatar AS author_avatar
+       FROM pet_care_records r JOIN pets p ON p.id = r.pet_id
+       LEFT JOIN users u ON u.id = r.created_by
+       ORDER BY r.care_date DESC, r.id DESC LIMIT ?`
+    ).all(limit);
+  res.json(rows);
+});
+
+app.post('/api/pet-care-records', (req, res) => {
+  const petId = positiveInt(req.body.pet_id);
+  const createdBy = req.body.created_by == null || req.body.created_by === '' ? null : positiveInt(req.body.created_by);
+  const careType = typeof req.body.care_type === 'string' ? req.body.care_type : '';
+  const careDate = req.body.care_date;
+  const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 500) : '';
+  if (!petId || !PET_CARE_TYPES.has(careType) || !isDate(careDate)) return res.status(400).json({ error: '请选择猫咪、护理项目和日期' });
+  const pet = db.prepare('SELECT * FROM pets WHERE id = ?').get(petId);
+  if (!pet) return res.status(404).json({ error: '猫咪不存在' });
+  if (createdBy && !db.prepare('SELECT 1 FROM users WHERE id = ?').get(createdBy)) return res.status(404).json({ error: '记录人不存在' });
+  const info = db.prepare(
+    'INSERT INTO pet_care_records (pet_id, care_type, care_date, note, created_by) VALUES (?, ?, ?, ?, ?)'
+  ).run(petId, careType, careDate, note, createdBy);
+  const record = db.prepare(
+    `SELECT r.*, p.name AS pet_name, p.avatar AS pet_avatar, p.color AS pet_color,
+            u.name AS author_name, u.avatar AS author_avatar
+     FROM pet_care_records r JOIN pets p ON p.id = r.pet_id
+     LEFT JOIN users u ON u.id = r.created_by WHERE r.id = ?`
+  ).get(info.lastInsertRowid);
+  broadcast({ type: 'pet_care_record', record });
+  res.status(201).json(record);
 });
 
 // ---------- 菜品 API ----------

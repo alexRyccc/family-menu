@@ -18,13 +18,17 @@
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
     voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), pendingPeople: $('#pendingPeople'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus'),
     repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
-    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel')
+    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'),
+    petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
+  const petCareTypes = {
+    vaccine: { label: '疫苗', schedule: 365 }, internal_deworming: { label: '体内驱虫', schedule: 90 }, external_deworming: { label: '体外驱虫', schedule: 30 }, bath: { label: '洗澡护理', schedule: 30 }, nail_trim: { label: '剪指甲', schedule: 21 }, health_check: { label: '健康检查', schedule: 180 }, vet_visit: { label: '就诊用药' }, weight: { label: '体重记录' }
+  };
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', notes: [], justAddedNoteId: null
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', notes: [], justAddedNoteId: null, pets: [], petRecords: []
   };
   let toastTimer;
   let lastFocus = null;
@@ -112,14 +116,17 @@
     document.body.classList.toggle('app-home', view === 'home');
     document.body.classList.toggle('app-menu', view === 'menu');
     document.body.classList.toggle('app-notes', view === 'notes');
+    document.body.classList.toggle('app-pets', view === 'pets');
     $('#homeScreen').classList.toggle('hidden', view !== 'home');
     $('#main').classList.toggle('hidden', view !== 'menu');
     dom.notesView.classList.toggle('hidden', view !== 'notes');
-    $('#topbarContext').textContent = view === 'notes' ? '猫家记事本' : '猫家点菜';
+    dom.petsView.classList.toggle('hidden', view !== 'pets');
+    $('#topbarContext').textContent = view === 'notes' ? '猫家记事本' : view === 'pets' ? '猫咪清单' : '猫家点菜';
     if (view === 'notes') {
       renderNoteForm();
       loadSharedNotes().catch(error => toast(error.message, 'error'));
     }
+    if (view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(error => toast(error.message, 'error'));
     window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
 
@@ -258,6 +265,101 @@
     toast('记录已复制', 'success');
   }
 
+  function careLabel(type) { return petCareTypes[type]?.label || '护理记录'; }
+
+  function daysFrom(date) {
+    if (!date) return null;
+    return Math.floor((new Date(`${today()}T00:00:00`) - new Date(`${date}T00:00:00`)) / 86400000);
+  }
+
+  function careState(type, record) {
+    if (!record) return { text: '尚无记录', tone: 'empty' };
+    const days = daysFrom(record.care_date);
+    const schedule = petCareTypes[type]?.schedule;
+    if (schedule && days >= schedule) return { text: `${record.care_date} · 建议安排`, tone: 'due' };
+    return { text: record.care_date, tone: 'done' };
+  }
+
+  function renderPets() {
+    const highlights = ['vaccine', 'internal_deworming', 'external_deworming', 'bath'];
+    dom.petGrid.innerHTML = state.pets.map(pet => {
+      const careRows = highlights.map(type => {
+        const status = careState(type, pet.latest?.[type]);
+        return `<li><span>${esc(careLabel(type))}</span><b class="pet-care-${status.tone}">${esc(status.text)}</b></li>`;
+      }).join('');
+      return `<article class="pet-card"><div class="pet-card-head"><span class="pet-avatar" style="background:${esc(pet.color)}">${esc(pet.avatar)}</span><div><h3>${esc(pet.name)}</h3><p>护理记录永久保留</p></div></div><ul class="pet-care-summary">${careRows}</ul></article>`;
+    }).join('') || '<div class="notes-empty"><strong>还没有猫咪资料</strong><span>请稍后再试。</span></div>';
+  }
+
+  function renderPetRecords() {
+    dom.petRecordCount.textContent = `${state.petRecords.length} 条永久记录`;
+    if (!state.petRecords.length) {
+      dom.petRecords.innerHTML = '<div class="notes-empty"><strong>还没有护理记录</strong><span>从疫苗、驱虫或洗澡开始登记吧。</span></div>';
+      return;
+    }
+    dom.petRecords.innerHTML = state.petRecords.map(record => `<article class="pet-record"><span class="pet-record-avatar" style="background:${esc(record.pet_color)}">${esc(record.pet_avatar)}</span><div class="pet-record-body"><div><strong>${esc(record.pet_name)}</strong><span class="pet-record-type">${esc(careLabel(record.care_type))}</span><time>${esc(record.care_date)}</time></div>${record.note ? `<p>${esc(record.note)}</p>` : ''}<small>${record.author_name ? `${esc(record.author_avatar || '')} ${esc(record.author_name)} 记录` : '家人记录'}</small></div></article>`).join('');
+  }
+
+  async function loadPets() {
+    state.pets = await api('/api/pets');
+    renderPets();
+  }
+
+  async function loadPetRecords() {
+    dom.petRecords.setAttribute('aria-busy', 'true');
+    try {
+      state.petRecords = await api('/api/pet-care-records');
+      renderPetRecords();
+    } finally {
+      dom.petRecords.removeAttribute('aria-busy');
+    }
+  }
+
+  function renderPetRecordForm() {
+    const previousPet = Number(dom.petRecordPet.value) || state.pets[0]?.id;
+    const previousType = dom.petRecordType.value || 'vaccine';
+    const previousAuthor = Number(dom.petRecordAuthor.value) || state.me?.id || state.users[0]?.id;
+    dom.petRecordPet.innerHTML = state.pets.map(pet => `<option value="${pet.id}">${esc(pet.avatar)} ${esc(pet.name)}</option>`).join('');
+    dom.petRecordType.innerHTML = Object.entries(petCareTypes).map(([value, type]) => `<option value="${value}">${esc(type.label)}</option>`).join('');
+    dom.petRecordAuthor.innerHTML = state.users.map(user => `<option value="${user.id}">${esc(user.avatar)} ${esc(user.name)}</option>`).join('') || '<option value="">未署名</option>';
+    if (previousPet && state.pets.some(pet => pet.id === previousPet)) dom.petRecordPet.value = String(previousPet);
+    dom.petRecordType.value = previousType;
+    if (previousAuthor && state.users.some(user => user.id === previousAuthor)) dom.petRecordAuthor.value = String(previousAuthor);
+    if (!dom.petRecordDate.value) dom.petRecordDate.value = today();
+    updatePetRecordCount();
+  }
+
+  function updatePetRecordCount() {
+    dom.petRecordNoteCount.textContent = `${dom.petRecordNote.value.length} / 500`;
+  }
+
+  function openPetRecordForm() {
+    renderPetRecordForm();
+    dom.petRecordStatus.textContent = '';
+    openModal('petRecordModal');
+  }
+
+  async function createPetRecord() {
+    const petId = Number(dom.petRecordPet.value);
+    const careType = dom.petRecordType.value;
+    const careDate = dom.petRecordDate.value;
+    if (!petId || !careType || !careDate) return toast('请完整选择猫咪、项目和日期', 'error');
+    const button = $('#btnSavePetRecord');
+    button.disabled = true;
+    dom.petRecordStatus.textContent = '正在保存...';
+    try {
+      await api('/api/pet-care-records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pet_id: petId, care_type: careType, care_date: careDate, note: dom.petRecordNote.value, created_by: Number(dom.petRecordAuthor.value) || null }) });
+      dom.petRecordNote.value = '';
+      updatePetRecordCount();
+      await Promise.all([loadPets(), loadPetRecords()]);
+      closeModal('petRecordModal');
+      toast('护理记录已永久保存', 'success');
+    } finally {
+      button.disabled = false;
+      dom.petRecordStatus.textContent = '';
+    }
+  }
+
   function setStep(step) {
     $$('.step-section').forEach(section => section.classList.toggle('hidden', section.id !== `step${step}`));
     dom.stepBar.classList.toggle('hidden', step === 1);
@@ -366,6 +468,7 @@
     updateIdentity();
     renderUsers();
     if (state.view === 'notes') renderNoteForm();
+    if (state.view === 'pets') renderPetRecordForm();
   }
 
   async function loadDishes() {
@@ -703,6 +806,10 @@
         if (state.view === 'notes' && noteDate === dom.noteDate.value) loadSharedNotes().catch(() => {});
         if (data.type === 'shared_note' && data.note.mention_user_ids?.includes(state.me?.id)) toast(`${data.note.author_name} 在共享记事本里 @ 了你`, 'info');
       }
+      if (data.type === 'pet_care_record') {
+        if (state.view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(() => {});
+        toast(`${data.record.pet_name} 新增了一条${careLabel(data.record.care_type)}记录`, 'info');
+      }
     };
     source.onerror = () => { source.close(); setConnection('offline'); clearTimeout(state.retryTimer); state.retryTimer = setTimeout(connectEvents, Math.min(1000 * 2 ** Math.min(++state.retries, 5), 30000)); };
   }
@@ -713,9 +820,12 @@
     try {
       if (button.id === 'btnOpenMenu') return setView('menu');
       if (button.id === 'btnOpenNotes') return setView('notes');
-      if (button.id === 'btnHome' || button.id === 'btnNotesBack') return setView('home');
+      if (button.id === 'btnOpenPets') return setView('pets');
+      if (button.id === 'btnHome' || button.id === 'btnNotesBack' || button.id === 'btnPetsBack') return setView('home');
       if (button.id === 'btnOpenNote') return openNoteComposer();
       if (button.id === 'btnCreateNote') return createSharedNote();
+      if (button.id === 'btnOpenPetRecord') return openPetRecordForm();
+      if (button.id === 'btnSavePetRecord') return createPetRecord();
       if (button.id === 'btnNotesPrev') return changeNotesDate(-1);
       if (button.id === 'btnNotesToday') { dom.noteDate.value = today(); return loadSharedNotes(); }
       if (button.id === 'btnNotesNext') return changeNotesDate(1);
@@ -787,6 +897,7 @@
   dom.noteAuthor.addEventListener('change', () => { renderNoteForm(); saveNoteDraft(); });
   dom.noteContent.addEventListener('input', () => { updateNoteCount(); saveNoteDraft(); });
   dom.mentionPicker.addEventListener('change', saveNoteDraft);
+  dom.petRecordNote.addEventListener('input', updatePetRecordCount);
   document.addEventListener('change', event => {
     const ingredient = event.target.closest('input[data-ingredient-index]');
     if (ingredient && state.recipe) {
