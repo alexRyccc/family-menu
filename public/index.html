@@ -10,8 +10,29 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐱</text></svg>">
 </head>
-<body>
+<body class="app-home">
   <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <section id="homeScreen" class="home-screen" aria-labelledby="homeTitle">
+    <div class="home-inner">
+      <p class="home-kicker">CAT HOUSE</p>
+      <h1 id="homeTitle">猫家的日常</h1>
+      <p class="home-lead">今天吃什么，和家人想说什么，都在这里。</p>
+      <div class="home-actions" aria-label="选择功能">
+        <button id="btnOpenMenu" class="home-choice home-choice-menu" type="button">
+          <span class="home-choice-icon" aria-hidden="true">🍚</span>
+          <span class="home-choice-copy"><strong>猫家点菜</strong><small>选人、选餐、选一道想吃的菜</small></span>
+          <span class="home-choice-arrow" aria-hidden="true">→</span>
+        </button>
+        <button id="btnOpenNotes" class="home-choice home-choice-notes" type="button">
+          <span class="home-choice-icon" aria-hidden="true">✎</span>
+          <span class="home-choice-copy"><strong>共享记事本</strong><small>按日期记录，也可以提醒家人</small></span>
+          <span class="home-choice-arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+      <p class="home-footnote">一家人的小安排，随手记下来。</p>
+    </div>
+  </section>
 
   <!-- 步骤指示器 -->
   <div id="stepBar" class="step-bar hidden">
@@ -26,7 +47,7 @@
   <!-- 顶栏 -->
   <header class="topbar" id="topbar">
     <div class="topbar-left">
-      <span class="topbar-logo">🐱 猫家点菜</span>
+      <button id="btnHome" class="topbar-logo" type="button" aria-label="返回猫家的日常主页">🐱 猫家点菜</button>
       <span id="connDot" class="conn-dot" title="连接中..."></span>
     </div>
     <div class="topbar-actions">
@@ -146,6 +167,49 @@
       <div id="feedList" class="feed-list"></div>
     </section>
   </main>
+
+  <section id="notesView" class="notes-view hidden" aria-labelledby="notesTitle">
+    <div class="notes-shell">
+      <header class="notes-heading">
+        <div>
+          <p class="notes-kicker">SHARED NOTES</p>
+          <h1 id="notesTitle">共享记事本</h1>
+          <p>把要紧的小事留给今天，也轻轻提醒该看到的人。</p>
+        </div>
+        <button id="btnNotesBack" class="notes-back" type="button">返回主页</button>
+      </header>
+
+      <section class="note-composer" aria-labelledby="noteComposerTitle">
+        <div class="note-composer-heading">
+          <h2 id="noteComposerTitle">新建记录</h2>
+          <p id="noteSaveStatus" role="status" aria-live="polite"></p>
+        </div>
+        <div class="note-fields">
+          <label>日期<input id="noteDate" type="date" required></label>
+          <label>记录人<select id="noteAuthor" required aria-label="记录人"></select></label>
+        </div>
+        <label class="note-content-label" for="noteContent">内容</label>
+        <textarea id="noteContent" rows="4" maxlength="1000" placeholder="例如：周六下午要买猫砂，晚饭前记得拿快递。"></textarea>
+        <fieldset class="mention-picker">
+          <legend>提醒谁看</legend>
+          <p>选择家人后，会在记录里标记 @姓名。</p>
+          <div id="mentionPicker" class="mention-list"></div>
+        </fieldset>
+        <div class="note-submit-row">
+          <span id="noteCount" class="note-count">0 / 1000</span>
+          <button id="btnCreateNote" class="btn-primary" type="button">发布记录</button>
+        </div>
+      </section>
+
+      <section class="notes-timeline" aria-labelledby="notesTimelineTitle">
+        <div class="notes-timeline-heading">
+          <div><p class="notes-kicker">TODAY</p><h2 id="notesTimelineTitle">当天记录</h2></div>
+          <span id="notesDateLabel" aria-live="polite"></span>
+        </div>
+        <div id="notesList" class="notes-list" aria-live="polite"></div>
+      </section>
+    </div>
+  </section>
 
   <!-- 更多菜单 -->
   <div id="moreMenu" class="modal-overlay hidden">

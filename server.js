@@ -111,6 +111,16 @@ db.exec(`
     last_triggered_date TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS shared_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    note_date TEXT NOT NULL,
+    content TEXT NOT NULL,
+    author_id INTEGER NOT NULL,
+    mention_user_ids TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   -- 初始化默认提醒时间
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('lunch', '10:30');
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('dinner', '16:30');
@@ -120,6 +130,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_vote_options_vote_id ON vote_options(vote_id);
   CREATE INDEX IF NOT EXISTS idx_vote_selections_vote_id ON vote_selections(vote_id);
+  CREATE INDEX IF NOT EXISTS idx_shared_notes_date ON shared_notes(note_date DESC, id DESC);
 `);
 
 const app = express();
@@ -129,7 +140,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       imgSrc: ["'self'", 'data:'],
-      styleSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -316,6 +327,79 @@ app.post('/api/users', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   broadcast({ type: 'user_added', user });
   res.json(user);
+});
+
+// ---------- 共享记事本 API ----------
+function parseMentionIds(value) {
+  try {
+    const parsed = JSON.parse(value || '[]');
+    return Array.isArray(parsed) ? parsed.map(positiveInt).filter(Boolean) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function serializeSharedNote(row) {
+  const mentionIds = parseMentionIds(row.mention_user_ids);
+  const mentions = mentionIds.length
+    ? db.prepare(`SELECT id, name, avatar, color FROM users WHERE id IN (${mentionIds.map(() => '?').join(',')}) ORDER BY id`).all(...mentionIds)
+    : [];
+  return { ...row, mention_user_ids: mentionIds, mentions };
+}
+
+app.get('/api/shared-notes', (req, res) => {
+  const date = isDate(req.query.date) ? req.query.date : todayStr();
+  const rows = db.prepare(
+    `SELECT n.*, u.name AS author_name, u.avatar AS author_avatar, u.color AS author_color
+     FROM shared_notes n JOIN users u ON u.id = n.author_id
+     WHERE n.note_date = ? ORDER BY n.id DESC`
+  ).all(date);
+  res.json({ date, notes: rows.map(serializeSharedNote) });
+});
+
+app.post('/api/shared-notes', (req, res) => {
+  const authorId = positiveInt(req.body.author_id);
+  const noteDate = req.body.note_date;
+  const content = typeof req.body.content === 'string' ? req.body.content.trim().slice(0, 1000) : '';
+  const mentionIds = Array.isArray(req.body.mention_user_ids)
+    ? [...new Set(req.body.mention_user_ids.map(positiveInt).filter(Boolean))].slice(0, 12)
+    : [];
+  if (!authorId || !isDate(noteDate) || !content) return res.status(400).json({ error: '请填写日期、记录人和内容' });
+  const author = db.prepare('SELECT id, name, avatar, color FROM users WHERE id = ?').get(authorId);
+  if (!author) return res.status(404).json({ error: '记录人不存在' });
+  const validMentionIds = mentionIds.filter(id => id !== authorId && db.prepare('SELECT 1 FROM users WHERE id = ?').get(id));
+  const info = db.prepare(
+    'INSERT INTO shared_notes (note_date, content, author_id, mention_user_ids) VALUES (?, ?, ?, ?)'
+  ).run(noteDate, content, authorId, JSON.stringify(validMentionIds));
+  const row = db.prepare(
+    `SELECT n.*, u.name AS author_name, u.avatar AS author_avatar, u.color AS author_color
+     FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.id = ?`
+  ).get(info.lastInsertRowid);
+  const note = serializeSharedNote(row);
+  broadcast({ type: 'shared_note', note });
+  if (note.mentions.length) {
+    pushNotification({
+      user_id: author.id,
+      user_name: author.name,
+      dish_name: '共享记事本',
+      meal: null,
+      type: 'shared_note',
+      message: `${author.name} 在共享记事本中提醒了 ${note.mentions.map(user => user.name).join('、')}。`
+    });
+  }
+  res.status(201).json(note);
+});
+
+app.delete('/api/shared-notes/:id', (req, res) => {
+  const noteId = positiveInt(req.params.id);
+  const authorId = positiveInt(req.query.author_id);
+  if (!noteId || !authorId) return res.status(400).json({ error: '参数无效' });
+  const note = db.prepare('SELECT id, author_id, note_date FROM shared_notes WHERE id = ?').get(noteId);
+  if (!note) return res.status(404).json({ error: '记录不存在' });
+  if (note.author_id !== authorId) return res.status(403).json({ error: '只能删除自己发布的记录' });
+  db.prepare('DELETE FROM shared_notes WHERE id = ?').run(noteId);
+  broadcast({ type: 'shared_note_deleted', id: noteId, note_date: note.note_date });
+  res.json({ ok: true });
 });
 
 // ---------- 菜品 API ----------

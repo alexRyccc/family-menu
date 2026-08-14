@@ -17,13 +17,14 @@
     search: $('#searchInput'), searchClear: $('#searchClear'), favorite: $('#chipFav'), adminList: $('#adminList'),
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
     voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), pendingPeople: $('#pendingPeople'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus'),
-    repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer')
+    repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
+    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', notes: []
   };
   let toastTimer;
   let lastFocus = null;
@@ -99,10 +100,102 @@
   }
 
   function updateIdentity() {
+    $('#btnMe').classList.toggle('hidden', !state.me);
     if (!state.me) return;
     dom.meAvatar.textContent = state.me.avatar;
     dom.meName.textContent = state.me.name;
     $('#btnMe').classList.remove('hidden');
+  }
+
+  function setView(view) {
+    state.view = view;
+    document.body.classList.toggle('app-home', view === 'home');
+    document.body.classList.toggle('app-menu', view === 'menu');
+    document.body.classList.toggle('app-notes', view === 'notes');
+    $('#homeScreen').classList.toggle('hidden', view !== 'home');
+    $('#main').classList.toggle('hidden', view !== 'menu');
+    dom.notesView.classList.toggle('hidden', view !== 'notes');
+    $('#btnHome').textContent = view === 'notes' ? '🐱 猫家的日常' : '🐱 猫家点菜';
+    if (view === 'notes') {
+      renderNoteForm();
+      loadSharedNotes().catch(error => toast(error.message, 'error'));
+    }
+    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+
+  function renderNoteForm() {
+    const priorAuthor = Number(dom.noteAuthor.value) || state.me?.id || state.users[0]?.id;
+    dom.noteAuthor.innerHTML = state.users.map(user => `<option value="${user.id}">${esc(user.avatar)} ${esc(user.name)}</option>`).join('') || '<option value="">请先新增家人</option>';
+    if (priorAuthor && state.users.some(user => user.id === priorAuthor)) dom.noteAuthor.value = String(priorAuthor);
+    if (!dom.noteDate.value) dom.noteDate.value = today();
+    const authorId = Number(dom.noteAuthor.value);
+    const selectedMentions = new Set($$('#mentionPicker input:checked').map(input => Number(input.value)));
+    dom.mentionPicker.innerHTML = state.users.filter(user => user.id !== authorId).map(user => `<label class="mention-option"><input type="checkbox" value="${user.id}" ${selectedMentions.has(user.id) ? 'checked' : ''}><span style="background:${esc(user.color)}">${esc(user.avatar)}</span><b>${esc(user.name)}</b></label>`).join('') || '<span class="mention-empty">添加家人后，可以在这里提醒对方。</span>';
+    updateNoteCount();
+  }
+
+  function updateNoteCount() {
+    dom.noteCount.textContent = `${dom.noteContent.value.length} / 1000`;
+  }
+
+  function renderSharedNotes() {
+    const date = dom.noteDate.value || today();
+    dom.notesDateLabel.textContent = dateLabel(date);
+    if (!state.notes.length) {
+      dom.notesList.innerHTML = '<div class="notes-empty"><strong>这一天还没有记录</strong><span>先写下一件想让家人知道的小事。</span></div>';
+      return;
+    }
+    dom.notesList.innerHTML = state.notes.map(note => {
+      const mentions = note.mentions?.length ? `<div class="note-mentions">${note.mentions.map(user => `<span>@${esc(user.name)}</span>`).join('')}</div>` : '';
+      const content = esc(note.content).replace(/\n/g, '<br>');
+      const canDelete = Number(dom.noteAuthor.value) === note.author_id;
+      const remove = canDelete ? `<button class="note-delete" type="button" data-delete-note="${note.id}" title="删除这条记录" aria-label="删除 ${esc(note.author_name)} 的这条记录">×</button>` : '';
+      return `<article class="note-entry"><div class="note-author"><span style="background:${esc(note.author_color)}">${esc(note.author_avatar)}</span><strong>${esc(note.author_name)}</strong><time>${esc(String(note.created_at || '').slice(11, 16))}</time>${remove}</div><p>${content}</p>${mentions}</article>`;
+    }).join('');
+  }
+
+  async function loadSharedNotes() {
+    const date = dom.noteDate.value || today();
+    dom.notesList.setAttribute('aria-busy', 'true');
+    try {
+      const result = await api(`/api/shared-notes?date=${encodeURIComponent(date)}`);
+      state.notes = result.notes;
+      renderSharedNotes();
+    } finally {
+      dom.notesList.removeAttribute('aria-busy');
+    }
+  }
+
+  async function createSharedNote() {
+    const content = dom.noteContent.value.trim();
+    const authorId = Number(dom.noteAuthor.value);
+    const noteDate = dom.noteDate.value;
+    const mentionUserIds = $$('#mentionPicker input:checked').map(input => Number(input.value));
+    if (!authorId) return toast('请先选择记录人', 'error');
+    if (!content) return toast('写一点内容再发布吧', 'error');
+    const button = $('#btnCreateNote');
+    button.disabled = true;
+    dom.noteSaveStatus.textContent = '正在发布...';
+    try {
+      await api('/api/shared-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, note_date: noteDate, content, mention_user_ids: mentionUserIds }) });
+      dom.noteContent.value = '';
+      $$('#mentionPicker input').forEach(input => { input.checked = false; });
+      updateNoteCount();
+      dom.noteSaveStatus.textContent = '已发布';
+      await loadSharedNotes();
+      toast(mentionUserIds.length ? '记录已发布，家人会看到提醒' : '记录已发布', 'success');
+    } finally {
+      button.disabled = false;
+      window.setTimeout(() => { if (dom.noteSaveStatus.textContent === '已发布') dom.noteSaveStatus.textContent = ''; }, 2400);
+    }
+  }
+
+  async function deleteSharedNote(noteId) {
+    const authorId = Number(dom.noteAuthor.value);
+    if (!noteId || !authorId || !confirm('删除这条记录？')) return;
+    await api(`/api/shared-notes/${noteId}?author_id=${authorId}`, { method: 'DELETE' });
+    await loadSharedNotes();
+    toast('记录已删除', 'success');
   }
 
   function setStep(step) {
@@ -212,6 +305,7 @@
     }
     updateIdentity();
     renderUsers();
+    if (state.view === 'notes') renderNoteForm();
   }
 
   async function loadDishes() {
@@ -544,6 +638,11 @@
       if (['notification', 'dish_added', 'dish_removed', 'vote_closed', 'vote_updated'].includes(data.type)) refreshDashboard().catch(() => {});
       if (['vote_created', 'vote_updated', 'vote_closed'].includes(data.type) && !$('#votesModal').classList.contains('hidden')) showVotes().catch(() => {});
       if (data.type === 'user_added') loadUsers().catch(() => {});
+      if (data.type === 'shared_note' || data.type === 'shared_note_deleted') {
+        const noteDate = data.note?.note_date || data.note_date;
+        if (state.view === 'notes' && noteDate === dom.noteDate.value) loadSharedNotes().catch(() => {});
+        if (data.type === 'shared_note' && data.note.mention_user_ids?.includes(state.me?.id)) toast(`${data.note.author_name} 在共享记事本里 @ 了你`, 'info');
+      }
     };
     source.onerror = () => { source.close(); setConnection('offline'); clearTimeout(state.retryTimer); state.retryTimer = setTimeout(connectEvents, Math.min(1000 * 2 ** Math.min(++state.retries, 5), 30000)); };
   }
@@ -552,6 +651,11 @@
     const button = event.target.closest('button, .who-card');
     if (!button) return;
     try {
+      if (button.id === 'btnOpenMenu') return setView('menu');
+      if (button.id === 'btnOpenNotes') return setView('notes');
+      if (button.id === 'btnHome' || button.id === 'btnNotesBack') return setView('home');
+      if (button.id === 'btnCreateNote') return createSharedNote();
+      if (button.dataset.deleteNote) return deleteSharedNote(Number(button.dataset.deleteNote));
       if (button.dataset.userId) return chooseUser(state.users.find(user => user.id === Number(button.dataset.userId)));
       if (button.dataset.switchId) return chooseUser(state.users.find(user => user.id === Number(button.dataset.switchId)));
       if ('addUser' in button.dataset) { renderAvatarPicker(); return openModal('addUserModal'); }
@@ -613,6 +717,9 @@
   });
 
   dom.search.addEventListener('input', () => { state.query = dom.search.value.trim(); dom.searchClear.classList.toggle('hidden', !state.query); clearTimeout(dom.search.timer); dom.search.timer = setTimeout(() => loadDishes().catch(error => toast(error.message, 'error')), 250); });
+  dom.noteDate.addEventListener('change', () => loadSharedNotes().catch(error => toast(error.message, 'error')));
+  dom.noteAuthor.addEventListener('change', renderNoteForm);
+  dom.noteContent.addEventListener('input', updateNoteCount);
   document.addEventListener('change', event => {
     const ingredient = event.target.closest('input[data-ingredient-index]');
     if (ingredient && state.recipe) {
@@ -659,6 +766,7 @@
       await Promise.all([loadUsers(), loadCategories(), loadFeed(), loadRecommendations()]);
       if (state.me) { updateIdentity(); setStep(2); await refreshDashboard(); } else setStep(1);
       connectEvents();
+      setView('home');
     } catch (error) { dom.whoError.classList.remove('hidden'); toast(error.message, 'error'); }
   }
 
