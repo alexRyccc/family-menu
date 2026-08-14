@@ -29,6 +29,11 @@
           <span class="home-choice-copy"><strong>猫家记事本</strong><small>按日期记录，也可以提醒家人</small></span>
           <span class="home-choice-arrow" aria-hidden="true">→</span>
         </button>
+        <button id="btnOpenPets" class="home-choice home-choice-pets" type="button">
+          <span class="home-choice-icon" aria-hidden="true">🐾</span>
+          <span class="home-choice-copy"><strong>猫咪清单</strong><small>妹妹、giao 和咩咩的护理记录</small></span>
+          <span class="home-choice-arrow" aria-hidden="true">→</span>
+        </button>
         <button id="btnOpenRecommendations" class="home-choice home-choice-recommendations" type="button">
           <span class="home-choice-icon" aria-hidden="true">⌖</span>
           <span class="home-choice-copy"><strong>推荐清单</strong><small>收藏好去处、好商家和好物，也能地图打卡</small></span>
@@ -68,11 +73,6 @@
 
   <!-- 主内容 -->
   <main class="main" id="main">
-    <button id="btnOpenPetsFromMenu" class="menu-pet-shortcut" type="button">
-      <span aria-hidden="true">🐾</span>
-      <span><strong>猫咪清单</strong><small>妹妹、giao 和咩咩的护理记录</small></span>
-      <span aria-hidden="true">→</span>
-    </button>
 
     <!-- 步骤 1: 选人 -->
     <section id="step1" class="step-section">
@@ -228,7 +228,7 @@
           <p>妹妹、giao 和咩咩的每次护理，都留在这里。</p>
         </div>
         <div class="pets-heading-actions">
-          <button id="btnPetsBack" class="notes-back" type="button">← 返回点菜</button>
+          <button id="btnPetsBack" class="notes-back" type="button">← 返回主页</button>
           <button id="btnOpenPetRecord" class="btn-primary pet-record-create" type="button">登记护理</button>
         </div>
       </header>
@@ -376,7 +376,6 @@
       <button class="menu-item" id="menuAdmin">⚙️ 管理菜品</button>
       <button class="menu-item" id="menuNotify">🔔 通知设置</button>
       <button class="menu-item" id="menuStats">📊 餐桌统计</button>
-      <button class="menu-item" id="menuPets">🐾 猫咪清单</button>
       <button class="menu-item" id="menuShortcuts">⌨️ 快捷操作</button>
       <button class="menu-item" data-close="moreMenu">关闭</button>
     </div>

@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const notify = require('./notify');
+const { travelCities } = require('./travel-cities');
 
 const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'data', 'family.db');
@@ -151,6 +152,8 @@ db.exec(`
     address TEXT NOT NULL DEFAULT '',
     latitude REAL,
     longitude REAL,
+    visited_label TEXT NOT NULL DEFAULT '',
+    travel_key TEXT NOT NULL DEFAULT '',
     created_by INTEGER,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
@@ -171,6 +174,16 @@ db.exec(`
     FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
   );
 
+  CREATE TABLE IF NOT EXISTS recommendation_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recommendation_id INTEGER NOT NULL,
+    image_path TEXT NOT NULL,
+    caption TEXT NOT NULL DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(recommendation_id) REFERENCES recommendations(id) ON DELETE CASCADE,
+    UNIQUE(recommendation_id, image_path)
+  );
+
   -- 初始化默认提醒时间
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('lunch', '10:30');
   INSERT OR IGNORE INTO reminders (meal, remind_time) VALUES ('dinner', '16:30');
@@ -187,6 +200,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_pet_care_records_pet_date ON pet_care_records(pet_id, care_date DESC, id DESC);
   CREATE INDEX IF NOT EXISTS idx_recommendations_kind ON recommendations(kind, id DESC);
   CREATE INDEX IF NOT EXISTS idx_recommendation_checkins_date ON recommendation_checkins(checkin_date DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_recommendation_images_recommendation ON recommendation_images(recommendation_id, sort_order);
 `);
 
 // Existing selections and notes retain their author; only update this family member's visual.
@@ -197,9 +211,38 @@ if (!db.prepare('PRAGMA table_info(selections)').all().some(column => column.nam
 if (!db.prepare('PRAGMA table_info(pets)').all().some(column => column.name === 'gender')) {
   db.exec("ALTER TABLE pets ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
 }
+if (!db.prepare('PRAGMA table_info(recommendations)').all().some(column => column.name === 'visited_label')) {
+  db.exec("ALTER TABLE recommendations ADD COLUMN visited_label TEXT NOT NULL DEFAULT ''");
+}
+if (!db.prepare('PRAGMA table_info(recommendations)').all().some(column => column.name === 'travel_key')) {
+  db.exec("ALTER TABLE recommendations ADD COLUMN travel_key TEXT NOT NULL DEFAULT ''");
+}
 db.prepare("UPDATE pets SET avatar = '/assets/pets/meimei.jpg', gender = '母猫' WHERE name = '妹妹'").run();
 db.prepare("UPDATE pets SET avatar = '/assets/pets/giao.jpg', gender = '公猫' WHERE name = 'giao'").run();
 db.prepare("UPDATE pets SET avatar = '/assets/pets/miemie.jpg', gender = '母猫' WHERE name = '咩咩'").run();
+
+const seedTravelCities = db.transaction(() => {
+  const find = db.prepare("SELECT id FROM recommendations WHERE travel_key = ?");
+  const insert = db.prepare('INSERT INTO recommendations (title, kind, description, region, address, latitude, longitude, visited_label, travel_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const update = db.prepare('UPDATE recommendations SET title = ?, kind = ?, description = ?, region = ?, address = ?, latitude = ?, longitude = ?, visited_label = ? WHERE id = ?');
+  const addImage = db.prepare('INSERT OR IGNORE INTO recommendation_images (recommendation_id, image_path, caption, sort_order) VALUES (?, ?, ?, ?)');
+  const findCheckin = db.prepare('SELECT id FROM recommendation_checkins WHERE recommendation_id = ? AND checkin_date = ?');
+  const addCheckin = db.prepare('INSERT INTO recommendation_checkins (recommendation_id, checkin_date, region, address, latitude, longitude, note) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  for (const city of travelCities) {
+    const existing = find.get(city.key);
+    const id = existing?.id || insert.run(city.name, 'place', city.description, city.country, city.name, city.latitude, city.longitude, city.dateLabel, city.key).lastInsertRowid;
+    if (existing) update.run(city.name, 'place', city.description, city.country, city.name, city.latitude, city.longitude, city.dateLabel, id);
+    for (let index = 1; index <= 3; index += 1) {
+      const imagePath = `/assets/travel/${city.key}-${index}.jpg`;
+      if (fs.existsSync(path.join(__dirname, 'public', imagePath))) addImage.run(id, imagePath, `${city.name} · 城市印象 ${index}`, index);
+    }
+    if (!findCheckin.get(id, city.visitedDate)) {
+      const note = city.dateLabel === '2020年' ? '从历史足迹导入，原记录仅标注到 2020 年。' : `从历史足迹导入，点亮时间：${city.dateLabel}。`;
+      addCheckin.run(id, city.visitedDate, city.country, city.name, city.latitude, city.longitude, note);
+    }
+  }
+});
+seedTravelCities();
 
 const app = express();
 app.disable('x-powered-by');
@@ -489,12 +532,14 @@ function recommendationLocation(body) {
 }
 
 function recommendationRecord(id) {
-  return db.prepare(
+  const record = db.prepare(
     `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar,
             (SELECT COUNT(*) FROM recommendation_checkins c WHERE c.recommendation_id = r.id) AS checkin_count,
             (SELECT MAX(c.checkin_date) FROM recommendation_checkins c WHERE c.recommendation_id = r.id) AS last_checkin_date
      FROM recommendations r LEFT JOIN users u ON u.id = r.created_by WHERE r.id = ?`
   ).get(id);
+  if (record) record.images = db.prepare('SELECT image_path, caption, sort_order FROM recommendation_images WHERE recommendation_id = ? ORDER BY sort_order, id').all(id);
+  return record;
 }
 
 app.get('/api/family-recommendations', (req, res) => {
@@ -503,8 +548,11 @@ app.get('/api/family-recommendations', (req, res) => {
   const query = `SELECT r.*, u.name AS author_name, u.avatar AS author_avatar,
     (SELECT COUNT(*) FROM recommendation_checkins c WHERE c.recommendation_id = r.id) AS checkin_count,
     (SELECT MAX(c.checkin_date) FROM recommendation_checkins c WHERE c.recommendation_id = r.id) AS last_checkin_date
-    FROM recommendations r LEFT JOIN users u ON u.id = r.created_by${kind ? ' WHERE r.kind = ?' : ''} ORDER BY r.id DESC`;
-  res.json(db.prepare(query).all(...(kind ? [kind] : [])));
+    FROM recommendations r LEFT JOIN users u ON u.id = r.created_by${kind ? ' WHERE r.kind = ?' : ''} ORDER BY CASE WHEN r.travel_key <> '' THEN 0 ELSE 1 END, r.id`;
+  const list = db.prepare(query).all(...(kind ? [kind] : []));
+  const images = db.prepare('SELECT recommendation_id, image_path, caption, sort_order FROM recommendation_images ORDER BY sort_order, id').all();
+  const byRecommendation = images.reduce((all, image) => ((all[image.recommendation_id] ||= []).push(image), all), {});
+  res.json(list.map(record => ({ ...record, images: byRecommendation[record.id] || [] })));
 });
 
 app.post('/api/family-recommendations', (req, res) => {

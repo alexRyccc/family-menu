@@ -429,11 +429,14 @@
   function renderRecommendations() {
     const visible = state.recommendationFilter === 'all' ? state.savedRecommendations : state.savedRecommendations.filter(item => item.kind === state.recommendationFilter);
     const located = state.savedRecommendations.filter(hasCoordinates).length;
-    dom.recommendationStats.textContent = `${state.savedRecommendations.length} 条推荐 · ${located} 个已定位`;
+    const travelCities = state.savedRecommendations.filter(item => item.travel_key).length;
+    dom.recommendationStats.textContent = `${travelCities} 座城市 · ${located} 个已定位`;
     dom.recommendationList.innerHTML = visible.map(item => {
       const type = recommendationTypes[item.kind] || recommendationTypes.place;
       const mapButton = hasCoordinates(item) ? `<button type="button" data-show-recommendation="${item.id}">地图查看</button>` : '';
-      return `<article class="recommendation-card"><div class="recommendation-card-top"><span class="recommendation-kind recommendation-kind-${esc(item.kind)}">${type.icon} ${esc(type.label)}</span><time>${esc(String(item.created_at || '').slice(0, 10))}</time></div><h3>${esc(item.title)}</h3><p class="recommendation-location">${esc(locationText(item))}</p>${item.description ? `<p class="recommendation-description">${esc(item.description)}</p>` : ''}<div class="recommendation-card-footer"><small>${item.author_name ? `${esc(item.author_avatar || '')} ${esc(item.author_name)} 推荐` : '家人推荐'}${item.checkin_count ? ` · ${item.checkin_count} 次打卡` : ''}</small><div>${mapButton}<button type="button" data-checkin-recommendation="${item.id}">去打卡</button></div></div></article>`;
+      const gallery = Array.isArray(item.images) && item.images.length ? `<div class="recommendation-gallery">${item.images.slice(0, 3).map(image => `<img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}" loading="lazy">`).join('')}</div>` : '';
+      const date = item.visited_label || String(item.created_at || '').slice(0, 10);
+      return `<article class="recommendation-card ${item.travel_key ? 'travel-city-card' : ''}">${gallery}<div class="recommendation-card-top"><span class="recommendation-kind recommendation-kind-${esc(item.kind)}">${type.icon} ${esc(type.label)}</span><time>${esc(date)}</time></div><h3>${esc(item.title)}</h3><p class="recommendation-location">${esc(locationText(item))}</p>${item.description ? `<p class="recommendation-description">${esc(item.description)}</p>` : ''}<div class="recommendation-card-footer"><small>${item.travel_key ? `${esc(item.region)} · 城市足迹` : item.author_name ? `${esc(item.author_avatar || '')} ${esc(item.author_name)} 推荐` : '家人推荐'}${item.checkin_count ? ` · ${item.checkin_count} 次打卡` : ''}</small><div>${mapButton}<button type="button" data-checkin-recommendation="${item.id}">去打卡</button></div></div></article>`;
     }).join('') || '<div class="notes-empty"><strong>还没有推荐</strong><span>把一家人觉得值得的地点、商家和商品先存下来。</span></div>';
     const target = state.savedRecommendations.find(item => item.id === state.mapRecommendationId) || state.savedRecommendations.find(hasCoordinates);
     setMapTarget(target, target?.title);
@@ -1014,12 +1017,12 @@
     try {
       if (button.id === 'btnOpenMenu') return setView('menu');
       if (button.id === 'btnOpenNotes') return setView('notes');
+      if (button.id === 'btnOpenPets') return setView('pets');
       if (button.id === 'btnOpenRecommendations') return setView('recommendations');
       if (button.id === 'btnHome' || button.id === 'btnNotesBack' || button.id === 'btnRecommendationsBack') return setView('home');
-      if (button.id === 'btnPetsBack') return setView('menu');
+      if (button.id === 'btnPetsBack') return setView('home');
       if (button.id === 'btnOpenNote') return openNoteComposer();
       if (button.id === 'btnCreateNote') return createSharedNote();
-      if (button.id === 'btnOpenPetsFromMenu') return setView('pets');
       if (button.id === 'btnOpenPetRecord') return openPetRecordForm();
       if (button.id === 'btnSavePetRecord') return createPetRecord();
       if (button.id === 'btnOpenRecommendation') return openRecommendationForm();
@@ -1068,7 +1071,6 @@
       if (button.id === 'menuVotes') { closeModal('moreMenu'); await showVotes(); return openModal('votesModal'); }
       if (button.id === 'menuNotify') { closeModal('moreMenu'); await showNotify(); return openModal('notifyModal'); }
       if (button.id === 'menuStats') { closeModal('moreMenu'); return showStats(); }
-      if (button.id === 'menuPets') { closeModal('moreMenu'); return setView('pets'); }
       if (button.id === 'menuShortcuts') { closeModal('moreMenu'); return openModal('shortcutsModal'); }
       if (button.id === 'btnCreateVote') return createVote();
       if (button.id === 'btnRefreshWeekly') return showWeekly();

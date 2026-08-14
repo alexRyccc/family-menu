@@ -1969,6 +1969,9 @@ body.app-recommendations .pets-view { display: none !important; }
 .recommendation-filter button[aria-pressed="true"] { border-color: #c95f45; background: #c95f45; color: #fff; box-shadow: 0 5px 12px rgba(173, 75, 52, .16); }
 .recommendation-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 .recommendation-card { display: flex; flex-direction: column; min-width: 0; min-height: 210px; padding: 16px; border: 1px solid #ead8b4; border-radius: 8px; background: #fffdf8; box-shadow: 0 8px 20px rgba(110, 74, 21, .04); }
+.travel-city-card { min-height: 0; }
+.recommendation-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: -4px -4px 14px; }
+.recommendation-gallery img { display: block; width: 100%; height: 106px; border-radius: 5px; object-fit: cover; background: #eee7d8; }
 .recommendation-card-top, .recommendation-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .recommendation-card-top time { color: #a18864; font-size: 11px; }
 .recommendation-kind { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; background: #edf5ef; color: #3d7760; font-size: 11px; font-weight: 800; }
@@ -2013,6 +2016,7 @@ body.app-recommendations .pets-view { display: none !important; }
   .recommendations-heading h1 { font-size: 27px; }
   .recommendations-heading-actions > * { flex: 1; min-height: 48px; }
   .recommendation-map-frame { height: 230px; }
+  .recommendation-gallery img { height: 92px; }
   .map-caption { align-items: flex-start; }
   .recommendation-form-grid { grid-template-columns: 1fr; gap: 10px; }
   .location-actions { align-items: flex-start; flex-direction: column; }
@@ -2027,15 +2031,6 @@ body.app-recommendations .pets-view { display: none !important; }
 
 /* The progress rail belongs only to the food-selection flow. */
 body:not(.app-menu) #topbar #stepBar { display: none !important; }
-.menu-pet-shortcut { display: flex; align-items: center; width: min(100%, 520px); gap: 12px; margin: 0 auto 20px; padding: 13px 16px; border: 1px solid #e1c58f; border-radius: 8px; background: #fffdf8; color: #63431c; font: inherit; text-align: left; box-shadow: 0 6px 16px rgba(110, 74, 21, .04); }
-.menu-pet-shortcut > :first-child { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #f8e6d7; color: #8f5d3c; font-size: 19px; }
-.menu-pet-shortcut > :nth-child(2) { display: grid; flex: 1; gap: 2px; min-width: 0; }
-.menu-pet-shortcut strong { font-size: 14px; }
-.menu-pet-shortcut small { overflow: hidden; color: #92724a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.menu-pet-shortcut > :last-child { color: #a27631; font-size: 18px; }
-.menu-pet-shortcut:hover { border-color: #c48a36; background: #fff8e9; }
-[data-theme="dark"] .menu-pet-shortcut { border-color: #5b4d35; background: #2d291f; color: #f5ead7; box-shadow: none; }
-[data-theme="dark"] .menu-pet-shortcut small { color: #ccb995; }
 
 /* ---------- 统一操作控件与点菜内宠物入口 ---------- */
 :root {
