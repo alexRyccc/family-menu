@@ -118,6 +118,7 @@ db.exec(`
     content TEXT NOT NULL,
     author_id INTEGER NOT NULL,
     mention_user_ids TEXT NOT NULL DEFAULT '[]',
+    pinned INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE CASCADE
   );
@@ -207,6 +208,9 @@ db.exec(`
 db.prepare("UPDATE users SET avatar = '🐮' WHERE name = '猫姨姨'").run();
 if (!db.prepare('PRAGMA table_info(selections)').all().some(column => column.name === 'note')) {
   db.exec("ALTER TABLE selections ADD COLUMN note TEXT NOT NULL DEFAULT ''");
+}
+if (!db.prepare('PRAGMA table_info(shared_notes)').all().some(column => column.name === 'pinned')) {
+  db.exec("ALTER TABLE shared_notes ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0");
 }
 if (!db.prepare('PRAGMA table_info(pets)').all().some(column => column.name === 'gender')) {
   db.exec("ALTER TABLE pets ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
@@ -464,9 +468,28 @@ app.get('/api/shared-notes', (req, res) => {
   const rows = db.prepare(
     `SELECT n.*, u.name AS author_name, u.avatar AS author_avatar, u.color AS author_color
      FROM shared_notes n JOIN users u ON u.id = n.author_id
-     WHERE n.note_date = ? ORDER BY n.id DESC`
+     WHERE n.note_date = ? ORDER BY n.pinned DESC, n.id DESC`
   ).all(date);
   res.json({ date, notes: rows.map(serializeSharedNote) });
+});
+
+app.get('/api/shared-notes/summary', (req, res) => {
+  const days = Math.min(31, Math.max(1, Number(req.query.days) || 7));
+  const endDate = isDate(req.query.end_date) ? req.query.end_date : todayStr();
+  const start = new Date(`${endDate}T00:00:00`);
+  start.setDate(start.getDate() - days + 1);
+  const startDate = [start.getFullYear(), String(start.getMonth() + 1).padStart(2, '0'), String(start.getDate()).padStart(2, '0')].join('-');
+  const summary = db.prepare(
+    `SELECT COUNT(*) AS total, COUNT(DISTINCT note_date) AS active_days,
+            SUM(CASE WHEN pinned = 1 THEN 1 ELSE 0 END) AS pinned_count
+     FROM shared_notes WHERE note_date BETWEEN ? AND ?`
+  ).get(startDate, endDate);
+  const authors = db.prepare(
+    `SELECT u.name, u.avatar, COUNT(*) AS count
+     FROM shared_notes n JOIN users u ON u.id = n.author_id
+     WHERE n.note_date BETWEEN ? AND ? GROUP BY n.author_id ORDER BY count DESC, u.id LIMIT 3`
+  ).all(startDate, endDate);
+  res.json({ start_date: startDate, end_date: endDate, days, ...summary, authors });
 });
 
 app.post('/api/shared-notes', (req, res) => {
@@ -512,6 +535,19 @@ app.delete('/api/shared-notes/:id', (req, res) => {
   db.prepare('DELETE FROM shared_notes WHERE id = ?').run(noteId);
   broadcast({ type: 'shared_note_deleted', id: noteId, note_date: note.note_date });
   res.json({ ok: true });
+});
+
+app.patch('/api/shared-notes/:id/pin', (req, res) => {
+  const noteId = positiveInt(req.params.id);
+  const authorId = positiveInt(req.body.author_id);
+  const pinned = req.body.pinned ? 1 : 0;
+  if (!noteId || !authorId) return res.status(400).json({ error: '参数无效' });
+  const note = db.prepare('SELECT id, author_id, note_date FROM shared_notes WHERE id = ?').get(noteId);
+  if (!note) return res.status(404).json({ error: '记录不存在' });
+  if (note.author_id !== authorId) return res.status(403).json({ error: '只能固定自己发布的记录' });
+  db.prepare('UPDATE shared_notes SET pinned = ? WHERE id = ?').run(pinned, noteId);
+  broadcast({ type: 'shared_note_pinned', id: noteId, note_date: note.note_date, pinned });
+  res.json({ ok: true, pinned: Boolean(pinned) });
 });
 
 // ---------- 宠物清单 API ----------

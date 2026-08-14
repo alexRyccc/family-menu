@@ -94,6 +94,11 @@
         <h1>中饭还是晚饭?</h1>
         <p id="mealDate"></p>
       </div>
+      <div class="meal-planner-toolbar" aria-label="用餐日期与时段">
+        <button id="btnMealDatePrev" type="button" aria-label="前一天">‹</button>
+        <button id="btnMealDateToday" type="button">今天</button>
+        <button id="btnMealDateNext" type="button" aria-label="后一天">›</button>
+      </div>
       <div class="meal-choice">
         <button class="meal-card" data-meal="lunch">
           <span class="meal-icon">🍚</span>
@@ -112,6 +117,7 @@
         <h2>想吃什么?</h2>
         <p>点一道菜告诉家人</p>
       </div>
+      <section id="menuStatusPanel" class="menu-status-panel" aria-live="polite"></section>
       <div class="filter-row">
         <div id="catChips" class="cat-chips"></div>
         <button id="chipFav" class="chip chip-fav" aria-pressed="false">🤍 收藏</button>
@@ -199,6 +205,7 @@
         </div>
         <div class="notes-heading-actions">
           <button id="btnNotesBack" class="notes-back" type="button">← 返回主页</button>
+          <button id="btnExportNotes" class="notes-back notes-utility" type="button">导出当天</button>
           <button id="btnOpenNote" class="btn-primary note-create" type="button">记录事情</button>
         </div>
       </header>
@@ -213,6 +220,10 @@
           </div>
         </div>
         <label class="notes-filter" for="noteFilter"><span>筛选当日记录</span><input id="noteFilter" type="search" placeholder="搜索内容或记录人" autocomplete="off"></label>
+        <div class="notes-tools" aria-label="记事本工具">
+          <button id="btnNotesPinned" type="button" aria-pressed="false">只看固定</button>
+          <span id="notesWeekSummary" aria-live="polite"></span>
+        </div>
         <p id="notesDateLabel" class="notes-date-label" aria-live="polite"></p>
         <div id="notesList" class="notes-list" aria-live="polite"></div>
       </section>
@@ -234,11 +245,12 @@
       </header>
       <section aria-labelledby="petOverviewTitle">
         <div class="pets-section-heading"><div><p class="notes-kicker">OVERVIEW</p><h2 id="petOverviewTitle">最近照护</h2></div><span id="petAttentionCount">点击登记，留存一条新记录</span></div>
-        <div class="pet-filter" aria-label="筛选猫咪护理状态"><button type="button" data-pet-filter="all" aria-pressed="true">全部</button><button type="button" data-pet-filter="attention" aria-pressed="false">需关注</button></div>
+        <div class="pet-filter" aria-label="筛选猫咪护理状态"><button type="button" data-pet-filter="all" aria-pressed="true">全部</button><button type="button" data-pet-filter="attention" aria-pressed="false">需关注</button><button type="button" data-pet-filter="due-soon" aria-pressed="false">近期安排</button></div>
         <div id="petGrid" class="pet-grid"></div>
       </section>
       <section class="pet-history-section" aria-labelledby="petHistoryTitle">
         <div class="pets-section-heading"><div><p class="notes-kicker">HISTORY</p><h2 id="petHistoryTitle">护理时间线</h2></div><span id="petRecordCount" aria-live="polite"></span></div>
+        <div id="petCareTypeFilter" class="pet-care-type-filter" aria-label="筛选护理项目"></div>
         <div id="petRecords" class="pet-records" aria-live="polite"></div>
       </section>
     </div>
@@ -267,6 +279,7 @@
       <section aria-labelledby="recommendationsListTitle">
         <div class="recommendations-section-heading"><div><p class="notes-kicker">SAVED</p><h2 id="recommendationsListTitle">我的推荐</h2></div><span id="recommendationStats" aria-live="polite"></span></div>
         <div class="recommendation-filter" aria-label="筛选推荐类型"><button type="button" data-recommendation-filter="all" aria-pressed="true">全部</button><button type="button" data-recommendation-filter="place" aria-pressed="false">地点</button><button type="button" data-recommendation-filter="merchant" aria-pressed="false">商家</button><button type="button" data-recommendation-filter="product" aria-pressed="false">商品</button></div>
+        <div id="recommendationRegionFilter" class="recommendation-region-filter" aria-label="筛选地区"></div>
         <div id="recommendationList" class="recommendation-list" aria-live="polite"></div>
       </section>
 
@@ -609,6 +622,27 @@
         <button class="btn-primary" data-close="recipeModal" type="button">完成制作</button>
       </div>
     </div>
+  </div>
+
+  <div id="petDetailModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="petDetailTitle">
+    <section class="modal pet-detail-modal">
+      <div class="note-composer-heading">
+        <div><p class="notes-kicker">CAT PROFILE</p><h2 id="petDetailTitle">猫咪档案</h2></div>
+        <button class="recipe-close" type="button" data-close="petDetailModal" aria-label="关闭猫咪档案">×</button>
+      </div>
+      <div id="petDetailContent" class="pet-detail-content" aria-live="polite"></div>
+      <div class="btn-row"><button id="btnPetDetailRecord" class="btn-primary" type="button">登记护理</button></div>
+    </section>
+  </div>
+
+  <div id="galleryModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="galleryTitle">
+    <section class="modal gallery-modal">
+      <div class="note-composer-heading">
+        <div><p class="notes-kicker">CITY ALBUM</p><h2 id="galleryTitle">城市图册</h2></div>
+        <button class="recipe-close" type="button" data-close="galleryModal" aria-label="关闭城市图册">×</button>
+      </div>
+      <div id="galleryContent" class="gallery-content"></div>
+    </section>
   </div>
 
   <!-- Toast -->
