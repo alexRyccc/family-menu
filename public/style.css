@@ -1938,3 +1938,61 @@ body.app-pets .notes-view { display: none !important; }
   .pet-card { transition: border-color 180ms ease, transform 180ms ease; }
   .pet-card:hover { border-color: #d1a35d; transform: translateY(-2px); }
 }
+
+/* ---------- 统一操作控件与点菜内宠物入口 ---------- */
+:root {
+  --control-surface: #fffdf8;
+  --control-border: #dfcda9;
+  --control-ink: #68451f;
+  --control-active: #c95f45;
+  --control-active-ink: #fffaf4;
+  --control-muted: #e7ded0;
+}
+#topbar .step-bar { padding: 6px 18px 12px; border-top: 1px solid rgba(220, 205, 173, .72); }
+#topbar .step-dots { max-width: 440px; min-height: 50px; gap: 0; }
+#topbar .step-dots::before { top: 18px; left: 12%; right: 12%; height: 2px; border-radius: 2px; background: var(--control-muted); }
+#topbar .step-dot { gap: 4px; }
+#topbar .step-dot b { width: 36px; height: 36px; border: 1px solid #d5c5aa; background: var(--control-surface); color: #7c684b; font-size: 14px; font-weight: 800; box-shadow: 0 1px 2px rgba(80, 55, 24, .05); }
+#topbar .step-dot small { color: #806e54; font-size: 11px; font-weight: 750; }
+#topbar .step-dot.active b { border-color: var(--control-active); background: var(--control-active); color: var(--control-active-ink); box-shadow: 0 6px 14px rgba(201, 95, 69, .22); }
+#topbar .step-dot.active small { color: #a54732; }
+#topbar .step-dot.done b { border-color: #7b9a80; background: #7b9a80; color: #fff; box-shadow: none; }
+#topbar .step-dot.done small { color: #52745b; }
+.btn-primary, .btn-secondary, .dish-btn, .dish-recipe, .quick-action, .note-create, .pet-record-create { transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 160ms ease, box-shadow 180ms ease; }
+.btn-primary:active, .btn-secondary:active, .dish-btn:active, .note-create:active, .pet-record-create:active { transform: translateY(1px); }
+.btn-primary { border: 1px solid rgba(157, 63, 45, .20); box-shadow: 0 6px 14px rgba(201, 95, 69, .18); }
+.btn-primary:hover { box-shadow: 0 9px 18px rgba(201, 95, 69, .24); }
+.notes-date-actions { padding: 3px; border: 1px solid var(--control-border); border-radius: 8px; background: var(--control-surface); gap: 2px; }
+.notes-date-actions button { min-width: 34px; min-height: 34px; border: 0; border-radius: 6px; background: transparent; color: var(--control-ink); box-shadow: none; }
+.notes-date-actions button:hover { background: #fff1cf; }
+.notes-date-actions #btnNotesToday { min-width: 50px; background: #f4ead9; color: #7a511d; }
+.notes-filter { display: grid; gap: 5px; margin-top: 14px; color: #856a42; font-size: 12px; font-weight: 700; }
+.notes-filter input { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--control-border); border-radius: 7px; background: var(--control-surface); color: #50391f; font-size: 14px; }
+.notes-filter input:focus { border-color: #c48a36; outline: 3px solid rgba(224, 178, 86, .22); }
+.note-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.note-tag-row button, .selection-note-chips button, .pet-filter button { min-height: 30px; padding: 0 9px; border: 1px solid #e2d1b0; border-radius: 999px; background: #fffdf8; color: #76542c; font-size: 12px; font-weight: 750; transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease; }
+.note-tag-row button:hover, .selection-note-chips button:hover, .pet-filter button:hover { border-color: #c48a36; background: #fff1cf; color: #694013; }
+.note-tag-row button:active, .selection-note-chips button:active, .pet-filter button:active { transform: translateY(1px); }
+.selection-note-editor { display: grid; gap: 8px; margin: 16px auto 0; max-width: 420px; padding: 14px; border: 1px solid #ead8b4; border-radius: 8px; background: #fffdf8; text-align: left; }
+.selection-note-editor label { color: #725631; font-size: 13px; font-weight: 800; }
+.selection-note-editor input { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--control-border); border-radius: 6px; background: #fffefa; color: #4d361e; font-size: 14px; }
+.selection-note-editor input:focus { border-color: #c48a36; outline: 3px solid rgba(224, 178, 86, .22); }
+.selection-note-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+#btnSaveSelectionNote { justify-self: start; min-height: 36px; padding: 0 12px; border: 1px solid #c48a36; border-radius: 6px; background: #fff1cf; color: #704719; font-size: 13px; font-weight: 800; }
+#btnSaveSelectionNote:hover { background: #fbe4b4; }
+.today-row { flex-wrap: wrap; }
+.today-selection-note { flex-basis: 100%; margin: -2px 0 1px 32px; color: #8b6737; font-size: 12px; }
+.pet-filter { display: flex; gap: 6px; margin-top: 12px; }
+.pet-filter button[aria-pressed="true"] { border-color: #c48a36; background: #fff1cf; color: #704719; }
+.pet-needs-attention { border-color: #d9b56e; }
+
+@media (max-width: 640px) {
+  #topbar .step-bar { padding: 6px 14px 10px; }
+  #topbar .step-dots { min-height: 48px; }
+  #topbar .step-dot b { width: 34px; height: 34px; }
+  .selection-note-editor { margin-top: 14px; padding: 12px; }
+  .notes-filter input { min-height: 44px; }
+}
+
+[data-theme="dark"] .notes-date-actions, [data-theme="dark"] .selection-note-editor, [data-theme="dark"] .notes-filter input, [data-theme="dark"] .note-tag-row button, [data-theme="dark"] .selection-note-chips button, [data-theme="dark"] .pet-filter button { border-color: #5b4d35; background: #2d291f; color: #f2dfbf; }
+[data-theme="dark"] .notes-date-actions #btnNotesToday, [data-theme="dark"] .note-tag-row button:hover, [data-theme="dark"] .selection-note-chips button:hover, [data-theme="dark"] .pet-filter button[aria-pressed="true"] { background: #443a26; }

@@ -18,8 +18,8 @@
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
     voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), pendingPeople: $('#pendingPeople'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus'),
     repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
-    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'),
-    petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus')
+    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'),
+    petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
@@ -28,7 +28,7 @@
   };
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', notes: [], justAddedNoteId: null, pets: [], petRecords: []
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', notes: [], noteFilter: '', justAddedNoteId: null, pets: [], petRecords: [], petFilter: 'all'
   };
   let toastTimer;
   let lastFocus = null;
@@ -171,13 +171,15 @@
 
   function renderSharedNotes() {
     const date = dom.noteDate.value || today();
-    dom.notesDateLabel.textContent = `${dateLabel(date)} · ${state.notes.length} 条记录`;
+    const keyword = state.noteFilter.trim().toLowerCase();
+    const visibleNotes = keyword ? state.notes.filter(note => `${note.content} ${note.author_name} ${note.mentions?.map(user => user.name).join(' ') || ''}`.toLowerCase().includes(keyword)) : state.notes;
+    dom.notesDateLabel.textContent = `${dateLabel(date)} · ${visibleNotes.length}${keyword ? ` / ${state.notes.length}` : ''} 条记录`;
     $('#notesTimelineTitle').textContent = date === today() ? '今天的记录' : '当天记录';
-    if (!state.notes.length) {
-      dom.notesList.innerHTML = '<div class="notes-empty"><strong>这一天还没有记录</strong><span>先写下一件想让家人知道的小事。</span></div>';
+    if (!visibleNotes.length) {
+      dom.notesList.innerHTML = `<div class="notes-empty"><strong>${keyword ? '没有匹配的记录' : '这一天还没有记录'}</strong><span>${keyword ? '换个关键词试试。' : '先写下一件想让家人知道的小事。'}</span></div>`;
       return;
     }
-    dom.notesList.innerHTML = state.notes.map(note => {
+    dom.notesList.innerHTML = visibleNotes.map(note => {
       const mentions = note.mentions?.length ? `<div class="note-mentions">${note.mentions.map(user => `<span>@${esc(user.name)}</span>`).join('')}</div>` : '';
       const content = esc(note.content).replace(/\n/g, '<br>');
       const canDelete = Number(dom.noteAuthor.value) === note.author_id;
@@ -265,6 +267,14 @@
     toast('记录已复制', 'success');
   }
 
+  function addNoteTag(tag) {
+    const token = `#${tag}`;
+    if (!dom.noteContent.value.includes(token)) dom.noteContent.value = `${dom.noteContent.value}${dom.noteContent.value.trim() ? ' ' : ''}${token}`;
+    updateNoteCount();
+    saveNoteDraft();
+    dom.noteContent.focus();
+  }
+
   function careLabel(type) { return petCareTypes[type]?.label || '护理记录'; }
 
   function daysFrom(date) {
@@ -282,13 +292,16 @@
 
   function renderPets() {
     const highlights = ['vaccine', 'internal_deworming', 'external_deworming', 'bath'];
-    dom.petGrid.innerHTML = state.pets.map(pet => {
+    const petsWithState = state.pets.map(pet => ({ pet, attention: highlights.some(type => careState(type, pet.latest?.[type]).tone !== 'done') }));
+    const visiblePets = state.petFilter === 'attention' ? petsWithState.filter(item => item.attention) : petsWithState;
+    dom.petAttentionCount.textContent = `${petsWithState.filter(item => item.attention).length} 只猫需要建立或更新护理记录`;
+    dom.petGrid.innerHTML = visiblePets.map(({ pet, attention }) => {
       const careRows = highlights.map(type => {
         const status = careState(type, pet.latest?.[type]);
         return `<li><span>${esc(careLabel(type))}</span><b class="pet-care-${status.tone}">${esc(status.text)}</b></li>`;
       }).join('');
-      return `<article class="pet-card"><div class="pet-card-head"><span class="pet-avatar" style="background:${esc(pet.color)}">${esc(pet.avatar)}</span><div><h3>${esc(pet.name)}</h3><p>护理记录永久保留</p></div></div><ul class="pet-care-summary">${careRows}</ul></article>`;
-    }).join('') || '<div class="notes-empty"><strong>还没有猫咪资料</strong><span>请稍后再试。</span></div>';
+      return `<article class="pet-card ${attention ? 'pet-needs-attention' : ''}"><div class="pet-card-head"><span class="pet-avatar" style="background:${esc(pet.color)}">${esc(pet.avatar)}</span><div><h3>${esc(pet.name)}</h3><p>${attention ? '有待补充的照护记录' : '近期照护已记录'}</p></div></div><ul class="pet-care-summary">${careRows}</ul></article>`;
+    }).join('') || '<div class="notes-empty"><strong>全部猫咪都已有最新记录</strong><span>切换到“全部”可查看完整清单。</span></div>';
   }
 
   function renderPetRecords() {
@@ -452,7 +465,7 @@
       dom.summary.innerHTML = `<div class="today-row empty">${state.date === today() ? '今天' : dateLabel(state.date)}还没有安排，先选一道吧。</div>`;
       return;
     }
-    dom.summary.innerHTML = ['lunch', 'dinner'].map(meal => groups[meal].length ? `<div class="today-meal-block"><h3 class="today-meal-header">${meal === 'lunch' ? '🍚' : '🍽️'} ${mealName(meal)}</h3>${groups[meal].map(item => `<div class="today-row"><span class="today-user-avatar" style="background:${esc(item.user_color)}">${esc(item.user_avatar)}</span><span class="today-user-name">${esc(item.user_name)}</span><span class="today-dish-name">${esc(item.dish_name)}</span></div>`).join('')}</div>` : '').join('');
+    dom.summary.innerHTML = ['lunch', 'dinner'].map(meal => groups[meal].length ? `<div class="today-meal-block"><h3 class="today-meal-header">${meal === 'lunch' ? '🍚' : '🍽️'} ${mealName(meal)}</h3>${groups[meal].map(item => `<div class="today-row"><span class="today-user-avatar" style="background:${esc(item.user_color)}">${esc(item.user_avatar)}</span><span class="today-user-name">${esc(item.user_name)}</span><span class="today-dish-name">${esc(item.dish_name)}</span>${item.note ? `<span class="today-selection-note">${esc(item.note)}</span>` : ''}</div>`).join('')}</div>` : '').join('');
   }
 
   function renderFeed() {
@@ -543,7 +556,9 @@
     $('#doneDish').innerHTML = `${visual}<div class="done-dish-info"><div class="done-dish-name">${esc(dish?.name || '')}</div><div class="done-dish-cat">${esc(dish?.category || '')}</div></div>`;
     $('#doneMessage').textContent = `${state.me.name}，${mealName(state.meal)}就选它了。`;
     $('#btnDoneOk').dataset.dishId = id;
+    dom.selectionNote.value = '';
     setStep(4); celebrate(); await refreshDashboard();
+    dom.selectionNote.value = state.selections[state.meal]?.note || '';
   }
 
   async function shareSelection() {
@@ -584,6 +599,18 @@
     if (!dishName) return toast('请先选择一道菜', 'error');
     await api('/api/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id, message: `${state.me.name} 已选好${mealName(state.meal)}：${dishName}，大家来看看吧。` }) });
     toast('已提醒家人', 'success');
+  }
+
+  async function saveSelectionNote() {
+    if (!state.me) return toast('请先选择家人', 'error');
+    const button = $('#btnSaveSelectionNote');
+    button.disabled = true;
+    try {
+      const result = await api('/api/select/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id, meal: state.meal, date: state.date, note: dom.selectionNote.value }) });
+      dom.selectionNote.value = result.note;
+      await refreshDashboard();
+      toast(result.note ? '用餐备注已保存' : '用餐备注已清除', 'success');
+    } finally { button.disabled = false; }
   }
 
   function recipeStorageKey(recipe) { return `fm_recipe_${recipe.dish_id}`; }
@@ -810,6 +837,7 @@
         if (state.view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(() => {});
         toast(`${data.record.pet_name} 新增了一条${careLabel(data.record.care_type)}记录`, 'info');
       }
+      if (data.type === 'selection_note' && state.view === 'menu' && data.date === state.date) refreshDashboard().catch(() => {});
     };
     source.onerror = () => { source.close(); setConnection('offline'); clearTimeout(state.retryTimer); state.retryTimer = setTimeout(connectEvents, Math.min(1000 * 2 ** Math.min(++state.retries, 5), 30000)); };
   }
@@ -820,12 +848,15 @@
     try {
       if (button.id === 'btnOpenMenu') return setView('menu');
       if (button.id === 'btnOpenNotes') return setView('notes');
-      if (button.id === 'btnOpenPets') return setView('pets');
-      if (button.id === 'btnHome' || button.id === 'btnNotesBack' || button.id === 'btnPetsBack') return setView('home');
+      if (button.id === 'btnHome' || button.id === 'btnNotesBack') return setView('home');
+      if (button.id === 'btnPetsBack') return setView('menu');
       if (button.id === 'btnOpenNote') return openNoteComposer();
       if (button.id === 'btnCreateNote') return createSharedNote();
       if (button.id === 'btnOpenPetRecord') return openPetRecordForm();
       if (button.id === 'btnSavePetRecord') return createPetRecord();
+      if (button.dataset.selectionNote) { dom.selectionNote.value = button.dataset.selectionNote; return dom.selectionNote.focus(); }
+      if (button.dataset.noteTag) return addNoteTag(button.dataset.noteTag);
+      if (button.dataset.petFilter) { state.petFilter = button.dataset.petFilter; $$('.pet-filter button').forEach(item => { const active = item === button; item.setAttribute('aria-pressed', String(active)); }); return renderPets(); }
       if (button.id === 'btnNotesPrev') return changeNotesDate(-1);
       if (button.id === 'btnNotesToday') { dom.noteDate.value = today(); return loadSharedNotes(); }
       if (button.id === 'btnNotesNext') return changeNotesDate(1);
@@ -858,6 +889,7 @@
       if (button.id === 'menuVotes') { closeModal('moreMenu'); await showVotes(); return openModal('votesModal'); }
       if (button.id === 'menuNotify') { closeModal('moreMenu'); await showNotify(); return openModal('notifyModal'); }
       if (button.id === 'menuStats') { closeModal('moreMenu'); return showStats(); }
+      if (button.id === 'menuPets') { closeModal('moreMenu'); return setView('pets'); }
       if (button.id === 'menuShortcuts') { closeModal('moreMenu'); return openModal('shortcutsModal'); }
       if (button.id === 'btnCreateVote') return createVote();
       if (button.id === 'btnRefreshWeekly') return showWeekly();
@@ -871,6 +903,7 @@
       if (button.id === 'btnAddFromEmpty') return openModal('adminModal');
       if (button.id === 'btnDoneBack') return setStep(3);
       if (button.id === 'btnDoneOk') return setStep(3);
+      if (button.id === 'btnSaveSelectionNote') return saveSelectionNote();
       if (button.id === 'btnUndoSelection') return undoSelection();
       if (button.id === 'btnNotifyFamily') return notifyFamily();
       if (button.id === 'btnCookSelected') { const dishId = Number($('#btnDoneOk').dataset.dishId); if (!dishId) return toast('请先选择一道菜', 'error'); return openRecipe(dishId); }
@@ -898,6 +931,7 @@
   dom.noteContent.addEventListener('input', () => { updateNoteCount(); saveNoteDraft(); });
   dom.mentionPicker.addEventListener('change', saveNoteDraft);
   dom.petRecordNote.addEventListener('input', updatePetRecordCount);
+  dom.noteFilter.addEventListener('input', () => { state.noteFilter = dom.noteFilter.value; renderSharedNotes(); });
   document.addEventListener('change', event => {
     const ingredient = event.target.closest('input[data-ingredient-index]');
     if (ingredient && state.recipe) {

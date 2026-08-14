@@ -159,6 +159,9 @@ db.exec(`
 
 // Existing selections and notes retain their author; only update this family member's visual.
 db.prepare("UPDATE users SET avatar = '🐮' WHERE name = '猫姨姨'").run();
+if (!db.prepare('PRAGMA table_info(selections)').all().some(column => column.name === 'note')) {
+  db.exec("ALTER TABLE selections ADD COLUMN note TEXT NOT NULL DEFAULT ''");
+}
 
 const app = express();
 app.disable('x-powered-by');
@@ -625,7 +628,7 @@ app.get('/api/meal', (req, res) => {
   const meal = req.query.meal;
   if (!isDate(date) || !isMeal(meal)) return res.status(400).json({ error: '日期或时段无效' });
   const list = db.prepare(
-    `SELECT s.user_id, s.meal, s.date, d.id AS dish_id, d.name AS dish_name, d.image,
+    `SELECT s.user_id, s.meal, s.date, s.note, d.id AS dish_id, d.name AS dish_name, d.image,
             u.name AS user_name, u.avatar AS user_avatar, u.color AS user_color
      FROM selections s
      JOIN dishes d ON s.dish_id = d.id
@@ -700,6 +703,18 @@ app.post('/api/select', (req, res) => {
   const targets = db.prepare('SELECT * FROM notify_targets ORDER BY id').all();
   notify.notifySelection({ user_name: user.name, dish_name: dish.name, meal, targets })
     .catch(error => console.error('[通知发送失败]', error.message));
+});
+
+app.post('/api/select/note', (req, res) => {
+  const userId = positiveInt(req.body.user_id);
+  const { meal, date } = req.body;
+  const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 80) : '';
+  if (!userId || !isMeal(meal) || !isDate(date)) return res.status(400).json({ error: '参数无效' });
+  const selection = db.prepare('SELECT id FROM selections WHERE user_id = ? AND meal = ? AND date = ?').get(userId, meal, date);
+  if (!selection) return res.status(404).json({ error: '请先选择一道菜' });
+  db.prepare('UPDATE selections SET note = ? WHERE id = ?').run(note, selection.id);
+  broadcast({ type: 'selection_note', user_id: userId, meal, date, note });
+  res.json({ ok: true, note });
 });
 
 app.delete('/api/select', (req, res) => {

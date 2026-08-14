@@ -29,11 +29,6 @@
           <span class="home-choice-copy"><strong>猫家记事本</strong><small>按日期记录，也可以提醒家人</small></span>
           <span class="home-choice-arrow" aria-hidden="true">→</span>
         </button>
-        <button id="btnOpenPets" class="home-choice home-choice-pets" type="button">
-          <span class="home-choice-icon" aria-hidden="true">🐾</span>
-          <span class="home-choice-copy"><strong>猫咪清单</strong><small>护理日期、健康记录和日常照护</small></span>
-          <span class="home-choice-arrow" aria-hidden="true">→</span>
-        </button>
       </div>
       <p class="home-footnote">一家人的小安排，随手记下来。</p>
     </div>
@@ -149,6 +144,16 @@
         <h2>选好了!</h2>
         <p id="doneMessage" class="done-message" role="status" aria-live="polite"></p>
         <div id="doneDish" class="done-dish"></div>
+        <div class="selection-note-editor">
+          <label for="selectionNote">这餐小备注</label>
+          <input id="selectionNote" type="text" maxlength="80" placeholder="例如：少辣、不要香菜、晚点做">
+          <div class="selection-note-chips" aria-label="快速填写用餐备注">
+            <button type="button" data-selection-note="少辣">少辣</button>
+            <button type="button" data-selection-note="不要香菜">不要香菜</button>
+            <button type="button" data-selection-note="晚点做">晚点做</button>
+          </div>
+          <button id="btnSaveSelectionNote" type="button">保存备注</button>
+        </div>
         <div class="done-actions">
           <button id="btnDoneBack" class="btn-secondary btn-lg">再选一个</button>
           <button id="btnDoneOk" class="btn-primary btn-lg">就这个!</button>
@@ -197,6 +202,7 @@
             <button id="btnNotesNext" type="button" aria-label="查看后一天">›</button>
           </div>
         </div>
+        <label class="notes-filter" for="noteFilter"><span>筛选当日记录</span><input id="noteFilter" type="search" placeholder="搜索内容或记录人" autocomplete="off"></label>
         <p id="notesDateLabel" class="notes-date-label" aria-live="polite"></p>
         <div id="notesList" class="notes-list" aria-live="polite"></div>
       </section>
@@ -212,12 +218,13 @@
           <p>妹妹、giao 和咩咩的每次护理，都留在这里。</p>
         </div>
         <div class="pets-heading-actions">
-          <button id="btnPetsBack" class="notes-back" type="button">← 返回主页</button>
+          <button id="btnPetsBack" class="notes-back" type="button">← 返回点菜</button>
           <button id="btnOpenPetRecord" class="btn-primary pet-record-create" type="button">登记护理</button>
         </div>
       </header>
       <section aria-labelledby="petOverviewTitle">
-        <div class="pets-section-heading"><div><p class="notes-kicker">OVERVIEW</p><h2 id="petOverviewTitle">最近照护</h2></div><span>点击登记，留存一条新记录</span></div>
+        <div class="pets-section-heading"><div><p class="notes-kicker">OVERVIEW</p><h2 id="petOverviewTitle">最近照护</h2></div><span id="petAttentionCount">点击登记，留存一条新记录</span></div>
+        <div class="pet-filter" aria-label="筛选猫咪护理状态"><button type="button" data-pet-filter="all" aria-pressed="true">全部</button><button type="button" data-pet-filter="attention" aria-pressed="false">需关注</button></div>
         <div id="petGrid" class="pet-grid"></div>
       </section>
       <section class="pet-history-section" aria-labelledby="petHistoryTitle">
@@ -239,6 +246,7 @@
         <label>记录人<select id="noteAuthor" required aria-label="记录人"></select></label>
       </div>
       <label class="note-content-label" for="noteContent">内容</label>
+      <div class="note-tag-row" aria-label="快捷标签"><button type="button" data-note-tag="提醒">提醒</button><button type="button" data-note-tag="采购">采购</button><button type="button" data-note-tag="外出">外出</button><button type="button" data-note-tag="重要">重要</button></div>
       <textarea id="noteContent" rows="4" maxlength="1000" placeholder="例如：周六下午要买猫砂，晚饭前记得拿快递。"></textarea>
       <fieldset class="mention-picker">
         <div class="mention-heading"><legend>提醒谁看</legend><button id="btnMentionAll" type="button">提醒全部家人</button></div>
@@ -285,6 +293,7 @@
       <button class="menu-item" id="menuAdmin">⚙️ 管理菜品</button>
       <button class="menu-item" id="menuNotify">🔔 通知设置</button>
       <button class="menu-item" id="menuStats">📊 餐桌统计</button>
+      <button class="menu-item" id="menuPets">🐾 猫咪清单</button>
       <button class="menu-item" id="menuShortcuts">⌨️ 快捷操作</button>
       <button class="menu-item" data-close="moreMenu">关闭</button>
     </div>
