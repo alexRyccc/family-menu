@@ -1876,6 +1876,7 @@ body.app-pets .notes-view { display: none !important; }
 .pet-card-head { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid #f0e4cc; }
 .pet-avatar, .pet-record-avatar { display: inline-grid; flex: 0 0 auto; place-items: center; border-radius: 50%; color: #fff; }
 .pet-avatar { width: 42px; height: 42px; font-size: 23px; }
+.pet-avatar-image, .pet-record-avatar-image { display: block; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .pet-card h3 { margin: 0; color: #46311a; font-size: 18px; }
 .pet-card-head p { margin: 1px 0 0; color: #987d55; font-size: 11px; }
 .pet-care-summary { display: grid; gap: 0; margin: 10px 0 0; padding: 0; list-style: none; }

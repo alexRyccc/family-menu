@@ -125,6 +125,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     avatar TEXT NOT NULL DEFAULT '🐱',
+    gender TEXT NOT NULL DEFAULT '',
     color TEXT NOT NULL DEFAULT '#d59a3a',
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
   );
@@ -162,6 +163,12 @@ db.prepare("UPDATE users SET avatar = '🐮' WHERE name = '猫姨姨'").run();
 if (!db.prepare('PRAGMA table_info(selections)').all().some(column => column.name === 'note')) {
   db.exec("ALTER TABLE selections ADD COLUMN note TEXT NOT NULL DEFAULT ''");
 }
+if (!db.prepare('PRAGMA table_info(pets)').all().some(column => column.name === 'gender')) {
+  db.exec("ALTER TABLE pets ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
+}
+db.prepare("UPDATE pets SET avatar = '/assets/pets/meimei.jpg', gender = '母猫' WHERE name = '妹妹'").run();
+db.prepare("UPDATE pets SET avatar = '/assets/pets/giao.jpg', gender = '公猫' WHERE name = 'giao'").run();
+db.prepare("UPDATE pets SET avatar = '/assets/pets/miemie.jpg', gender = '母猫' WHERE name = '咩咩'").run();
 
 const app = express();
 app.disable('x-powered-by');
@@ -457,14 +464,14 @@ app.get('/api/pet-care-records', (req, res) => {
   const limit = Math.min(300, Math.max(1, Number(req.query.limit) || 120));
   const rows = petId
     ? db.prepare(
-      `SELECT r.*, p.name AS pet_name, p.avatar AS pet_avatar, p.color AS pet_color,
+      `SELECT r.*, p.name AS pet_name, p.avatar AS pet_avatar, p.gender AS pet_gender, p.color AS pet_color,
               u.name AS author_name, u.avatar AS author_avatar
        FROM pet_care_records r JOIN pets p ON p.id = r.pet_id
        LEFT JOIN users u ON u.id = r.created_by
        WHERE r.pet_id = ? ORDER BY r.care_date DESC, r.id DESC LIMIT ?`
     ).all(petId, limit)
     : db.prepare(
-      `SELECT r.*, p.name AS pet_name, p.avatar AS pet_avatar, p.color AS pet_color,
+      `SELECT r.*, p.name AS pet_name, p.avatar AS pet_avatar, p.gender AS pet_gender, p.color AS pet_color,
               u.name AS author_name, u.avatar AS author_avatar
        FROM pet_care_records r JOIN pets p ON p.id = r.pet_id
        LEFT JOIN users u ON u.id = r.created_by

@@ -290,6 +290,12 @@
     return { text: record.care_date, tone: 'done' };
   }
 
+  function petAvatar(pet, className) {
+    const avatar = String(pet?.avatar || '🐱');
+    if (avatar.startsWith('/assets/pets/')) return `<img class="${className}-image" src="${esc(avatar)}" alt="${esc(pet.name)}的头像">`;
+    return esc(avatar);
+  }
+
   function renderPets() {
     const highlights = ['vaccine', 'internal_deworming', 'external_deworming', 'bath'];
     const petsWithState = state.pets.map(pet => ({ pet, attention: highlights.some(type => careState(type, pet.latest?.[type]).tone !== 'done') }));
@@ -300,7 +306,7 @@
         const status = careState(type, pet.latest?.[type]);
         return `<li><span>${esc(careLabel(type))}</span><b class="pet-care-${status.tone}">${esc(status.text)}</b></li>`;
       }).join('');
-      return `<article class="pet-card ${attention ? 'pet-needs-attention' : ''}"><div class="pet-card-head"><span class="pet-avatar" style="background:${esc(pet.color)}">${esc(pet.avatar)}</span><div><h3>${esc(pet.name)}</h3><p>${attention ? '有待补充的照护记录' : '近期照护已记录'}</p></div></div><ul class="pet-care-summary">${careRows}</ul></article>`;
+      return `<article class="pet-card ${attention ? 'pet-needs-attention' : ''}"><div class="pet-card-head"><span class="pet-avatar" style="background:${esc(pet.color)}">${petAvatar(pet, 'pet-avatar')}</span><div><h3>${esc(pet.name)}</h3><p>${esc(pet.gender || '未标注')} · ${attention ? '有待补充的照护记录' : '近期照护已记录'}</p></div></div><ul class="pet-care-summary">${careRows}</ul></article>`;
     }).join('') || '<div class="notes-empty"><strong>全部猫咪都已有最新记录</strong><span>切换到“全部”可查看完整清单。</span></div>';
   }
 
@@ -310,7 +316,7 @@
       dom.petRecords.innerHTML = '<div class="notes-empty"><strong>还没有护理记录</strong><span>从疫苗、驱虫或洗澡开始登记吧。</span></div>';
       return;
     }
-    dom.petRecords.innerHTML = state.petRecords.map(record => `<article class="pet-record"><span class="pet-record-avatar" style="background:${esc(record.pet_color)}">${esc(record.pet_avatar)}</span><div class="pet-record-body"><div><strong>${esc(record.pet_name)}</strong><span class="pet-record-type">${esc(careLabel(record.care_type))}</span><time>${esc(record.care_date)}</time></div>${record.note ? `<p>${esc(record.note)}</p>` : ''}<small>${record.author_name ? `${esc(record.author_avatar || '')} ${esc(record.author_name)} 记录` : '家人记录'}</small></div></article>`).join('');
+    dom.petRecords.innerHTML = state.petRecords.map(record => `<article class="pet-record"><span class="pet-record-avatar" style="background:${esc(record.pet_color)}">${petAvatar({ name: record.pet_name, avatar: record.pet_avatar }, 'pet-record-avatar')}</span><div class="pet-record-body"><div><strong>${esc(record.pet_name)}${record.pet_gender ? ` · ${esc(record.pet_gender)}` : ''}</strong><span class="pet-record-type">${esc(careLabel(record.care_type))}</span><time>${esc(record.care_date)}</time></div>${record.note ? `<p>${esc(record.note)}</p>` : ''}<small>${record.author_name ? `${esc(record.author_avatar || '')} ${esc(record.author_name)} 记录` : '家人记录'}</small></div></article>`).join('');
   }
 
   async function loadPets() {
@@ -332,7 +338,7 @@
     const previousPet = Number(dom.petRecordPet.value) || state.pets[0]?.id;
     const previousType = dom.petRecordType.value || 'vaccine';
     const previousAuthor = Number(dom.petRecordAuthor.value) || state.me?.id || state.users[0]?.id;
-    dom.petRecordPet.innerHTML = state.pets.map(pet => `<option value="${pet.id}">${esc(pet.avatar)} ${esc(pet.name)}</option>`).join('');
+    dom.petRecordPet.innerHTML = state.pets.map(pet => `<option value="${pet.id}">${esc(pet.name)}（${esc(pet.gender || '未标注')}）</option>`).join('');
     dom.petRecordType.innerHTML = Object.entries(petCareTypes).map(([value, type]) => `<option value="${value}">${esc(type.label)}</option>`).join('');
     dom.petRecordAuthor.innerHTML = state.users.map(user => `<option value="${user.id}">${esc(user.avatar)} ${esc(user.name)}</option>`).join('') || '<option value="">未署名</option>';
     if (previousPet && state.pets.some(pet => pet.id === previousPet)) dom.petRecordPet.value = String(previousPet);
