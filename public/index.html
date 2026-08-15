@@ -39,6 +39,11 @@
           <span class="home-choice-copy"><strong>推荐清单</strong><small>收藏好去处、好商家和好物，也能地图打卡</small></span>
           <span class="home-choice-arrow" aria-hidden="true">→</span>
         </button>
+        <button id="btnOpenPolls" class="home-choice home-choice-polls" type="button">
+          <span class="home-choice-icon" aria-hidden="true">🗳️</span>
+          <span class="home-choice-copy"><strong>家庭投票</strong><small>自定义问题，分享链接后家人马上参与</small></span>
+          <span class="home-choice-arrow" aria-hidden="true">→</span>
+        </button>
       </div>
       <section class="home-today" aria-labelledby="homeTodayTitle">
         <div class="home-section-heading"><div><p class="home-kicker">TODAY</p><h2 id="homeTodayTitle">今日待办</h2></div><button id="btnRefreshHome" type="button">刷新</button></div>
@@ -136,6 +141,13 @@
         <button id="btnRepeatLast" class="quick-action hidden" type="button">上次同款</button>
         <button id="btnAvoidRepeat" class="quick-action" type="button" aria-pressed="false">本周不重样</button>
       </div>
+      <nav class="module-launcher menu-launcher" aria-label="点菜快捷操作">
+        <button type="button" data-menu-quick="tomorrow"><i aria-hidden="true">↗</i><span>明天先选</span></button>
+        <button type="button" data-menu-quick="meal"><i aria-hidden="true">◐</i><span>切换午晚餐</span></button>
+        <button type="button" data-menu-quick="surprise"><i aria-hidden="true">✦</i><span>帮我随机</span></button>
+        <button type="button" data-menu-quick="shopping"><i aria-hidden="true">⌑</i><span>购物清单</span></button>
+        <button type="button" data-menu-quick="vote"><i aria-hidden="true">◉</i><span>投票选菜</span></button>
+      </nav>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input id="searchInput" class="search-input" type="search" name="dish-search" placeholder="搜索菜品…" aria-label="搜索菜品" autocomplete="off">
@@ -214,6 +226,13 @@
           <button id="btnOpenNote" class="btn-primary note-create" type="button">记录事情</button>
         </div>
       </header>
+      <nav class="module-launcher" aria-label="记事本快捷操作">
+        <button type="button" data-note-quick="task"><i aria-hidden="true">✓</i><span>新建待办</span></button>
+        <button type="button" data-note-quick="shopping"><i aria-hidden="true">⌑</i><span>采购清单</span></button>
+        <button type="button" data-note-quick="mention"><i aria-hidden="true">@</i><span>提醒全家</span></button>
+        <button type="button" data-note-quick="priority"><i aria-hidden="true">!</i><span>高优先级</span></button>
+        <button type="button" data-note-quick="agenda"><i aria-hidden="true">→</i><span>近期待办</span></button>
+      </nav>
 
       <section class="notes-overview" aria-label="记事日历与近期待办">
         <div class="notes-calendar-panel">
@@ -264,6 +283,13 @@
           <button id="btnOpenPetRecord" class="btn-primary pet-record-create" type="button">登记护理</button>
         </div>
       </header>
+      <nav class="module-launcher" aria-label="猫咪清单快捷登记">
+        <button type="button" data-pet-quick="vaccine"><i aria-hidden="true">✚</i><span>疫苗</span></button>
+        <button type="button" data-pet-quick="internal_deworming"><i aria-hidden="true">◌</i><span>体内驱虫</span></button>
+        <button type="button" data-pet-quick="external_deworming"><i aria-hidden="true">◍</i><span>体外驱虫</span></button>
+        <button type="button" data-pet-quick="bath"><i aria-hidden="true">≈</i><span>洗澡护理</span></button>
+        <button type="button" data-pet-quick="weight"><i aria-hidden="true">⌁</i><span>体重记录</span></button>
+      </nav>
       <section aria-labelledby="petOverviewTitle">
         <div class="pets-section-heading"><div><p class="notes-kicker">OVERVIEW</p><h2 id="petOverviewTitle">最近照护</h2></div><span id="petAttentionCount">点击登记，留存一条新记录</span></div>
         <div class="pet-filter" aria-label="筛选猫咪护理状态"><button type="button" data-pet-filter="all" aria-pressed="true">全部</button><button type="button" data-pet-filter="attention" aria-pressed="false">需关注</button><button type="button" data-pet-filter="due-soon" aria-pressed="false">近期安排</button></div>
@@ -290,6 +316,13 @@
           <button id="btnOpenRecommendation" class="btn-primary" type="button">新增推荐</button>
         </div>
       </header>
+      <nav class="module-launcher" aria-label="推荐清单快捷筛选">
+        <button type="button" data-recommendation-quick="want"><i aria-hidden="true">○</i><span>想去想买</span></button>
+        <button type="button" data-recommendation-quick="visited"><i aria-hidden="true">✓</i><span>去过回购</span></button>
+        <button type="button" data-recommendation-quick="rating"><i aria-hidden="true">★</i><span>五星精选</span></button>
+        <button type="button" data-recommendation-quick="travel"><i aria-hidden="true">⌖</i><span>旅行足迹</span></button>
+        <button type="button" data-recommendation-quick="checkin"><i aria-hidden="true">＋</i><span>立即打卡</span></button>
+      </nav>
 
       <section class="recommendation-map-section" aria-labelledby="recommendationMapTitle">
         <div class="recommendations-section-heading"><div><p class="notes-kicker">MAP</p><h2 id="recommendationMapTitle">免费地图定位</h2></div><button id="btnOpenCheckin" class="map-checkin-button" type="button">打卡</button></div>
@@ -316,6 +349,57 @@
       </section>
     </div>
   </section>
+
+  <section id="pollsView" class="polls-view hidden" aria-labelledby="pollsTitle">
+    <div class="polls-shell">
+      <header class="polls-heading">
+        <div>
+          <p class="notes-kicker">QUICK FAMILY POLLS</p>
+          <h1 id="pollsTitle">家庭投票</h1>
+          <p>一句问题，发个链接，大家很快就能一起决定。</p>
+        </div>
+        <div class="polls-heading-actions">
+          <button id="btnPollsBack" class="notes-back" type="button">← 返回主页</button>
+          <button id="btnOpenPollComposer" class="btn-primary" type="button">发起投票</button>
+        </div>
+      </header>
+      <div class="polls-benefits" aria-label="投票规则"><span>一人一票</span><span>随时可以改票</span><span>链接快速分享</span></div>
+      <nav class="module-launcher poll-templates" aria-label="投票模板">
+        <button type="button" data-poll-template="dinner"><i aria-hidden="true">◉</i><span>今晚吃什么</span></button>
+        <button type="button" data-poll-template="outing"><i aria-hidden="true">⌖</i><span>周末去哪</span></button>
+        <button type="button" data-poll-template="chores"><i aria-hidden="true">✓</i><span>家务分工</span></button>
+        <button type="button" data-poll-template="shopping"><i aria-hidden="true">⌑</i><span>采购决定</span></button>
+        <button type="button" data-poll-template="date"><i aria-hidden="true">◷</i><span>确定日期</span></button>
+      </nav>
+      <div id="pollsList" class="polls-list" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <div id="pollComposerModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pollComposerTitle">
+    <section class="modal poll-composer-modal" aria-label="发起家庭投票">
+      <div class="note-composer-heading">
+        <div><p class="notes-kicker">NEW FAMILY POLL</p><h2 id="pollComposerTitle">发起家庭投票</h2></div>
+        <button class="recipe-close" type="button" data-close="pollComposerModal" aria-label="关闭发起投票窗口">×</button>
+      </div>
+      <p id="pollCreateStatus" class="poll-create-status" role="status" aria-live="polite"></p>
+      <label class="poll-field" for="pollTitle">投票问题<input id="pollTitle" type="text" maxlength="60" placeholder="例如：周末去哪里放松？" required></label>
+      <label class="poll-field" for="pollDescription">补充说明<textarea id="pollDescription" rows="2" maxlength="180" placeholder="可选：补充背景、预算或希望大家注意的事"></textarea></label>
+      <div class="poll-form-grid">
+        <label class="poll-field" for="pollDeadline">截止日期<input id="pollDeadline" type="date"></label>
+        <label class="poll-field" for="pollAuthor">发起人<select id="pollAuthor" required aria-label="选择发起人"></select></label>
+      </div>
+      <div class="poll-options-heading"><div><strong>候选项</strong><small>至少两个，最多八个</small></div><button id="btnAddPollOption" type="button">+ 添加选项</button></div>
+      <div id="pollOptionInputs" class="poll-option-inputs"></div>
+      <div class="note-submit-row"><button class="btn-secondary" type="button" data-close="pollComposerModal">取消</button><button id="btnCreateFamilyPoll" class="btn-primary" type="button">创建并复制链接</button></div>
+    </section>
+  </div>
+
+  <div id="sharedPollModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sharedPollTitle">
+    <section class="modal shared-poll-modal" aria-label="家庭投票">
+      <div class="note-composer-heading"><div><p class="notes-kicker">FAMILY POLL</p><h2 id="sharedPollTitle">家庭投票</h2></div><button class="recipe-close" type="button" data-close="sharedPollModal" aria-label="关闭家庭投票">×</button></div>
+      <div id="sharedPollContent" aria-live="polite"></div>
+    </section>
+  </div>
 
   <div id="noteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="noteComposerTitle">
     <section class="modal note-modal" aria-label="记录事情">

@@ -104,6 +104,38 @@ db.exec(`
     UNIQUE(vote_id, user_id)
   );
 
+  CREATE TABLE IF NOT EXISTS family_polls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    share_code TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+    deadline TEXT NOT NULL DEFAULT '',
+    created_by INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS family_poll_options (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    poll_id INTEGER NOT NULL,
+    label TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(poll_id) REFERENCES family_polls(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS family_poll_votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    poll_id INTEGER NOT NULL,
+    option_id INTEGER NOT NULL,
+    voter_key TEXT NOT NULL,
+    voter_name TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    UNIQUE(poll_id, voter_key),
+    FOREIGN KEY(poll_id) REFERENCES family_polls(id) ON DELETE CASCADE,
+    FOREIGN KEY(option_id) REFERENCES family_poll_options(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS reminders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     meal TEXT NOT NULL UNIQUE CHECK (meal IN ('lunch','dinner')),
@@ -246,6 +278,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_selections_user_meal_date ON selections(user_id, meal, date);
   CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_vote_options_vote_id ON vote_options(vote_id);
+  CREATE INDEX IF NOT EXISTS idx_family_poll_options_poll ON family_poll_options(poll_id, sort_order);
+  CREATE INDEX IF NOT EXISTS idx_family_poll_votes_poll ON family_poll_votes(poll_id, option_id);
   CREATE INDEX IF NOT EXISTS idx_vote_selections_vote_id ON vote_selections(vote_id);
   CREATE INDEX IF NOT EXISTS idx_shared_notes_date ON shared_notes(note_date DESC, id DESC);
   CREATE INDEX IF NOT EXISTS idx_pet_care_records_pet_date ON pet_care_records(pet_id, care_date DESC, id DESC);
@@ -1400,6 +1434,85 @@ app.post('/api/votes/:id/close', (req, res) => {
   })();
   broadcast({ type: 'vote_closed', id: voteId, winner: winner ? winner.dish_id : null });
   res.json({ ok: true });
+});
+
+// ---------- 家庭投票 API ----------
+function familyPollRecord(poll, voterKey = '') {
+  if (!poll) return null;
+  const options = db.prepare(
+    `SELECT o.id, o.label, o.sort_order, COUNT(v.id) AS vote_count
+     FROM family_poll_options o LEFT JOIN family_poll_votes v ON v.option_id = o.id
+     WHERE o.poll_id = ? GROUP BY o.id ORDER BY o.sort_order, o.id`
+  ).all(poll.id);
+  const totalVotes = options.reduce((sum, option) => sum + option.vote_count, 0);
+  const voterChoice = voterKey ? db.prepare('SELECT option_id FROM family_poll_votes WHERE poll_id = ? AND voter_key = ?').get(poll.id, voterKey)?.option_id || null : null;
+  const author = poll.created_by ? db.prepare('SELECT id, name, avatar FROM users WHERE id = ?').get(poll.created_by) : null;
+  return { ...poll, options, total_votes: totalVotes, voter_choice: voterChoice, author };
+}
+
+function createFamilyPollCode() {
+  let code = '';
+  do { code = crypto.randomBytes(6).toString('base64url'); } while (db.prepare('SELECT 1 FROM family_polls WHERE share_code = ?').get(code));
+  return code;
+}
+
+app.get('/api/family-polls', (req, res) => {
+  const polls = db.prepare('SELECT * FROM family_polls ORDER BY CASE status WHEN \'open\' THEN 0 ELSE 1 END, id DESC LIMIT 50').all();
+  res.json(polls.map(poll => familyPollRecord(poll)));
+});
+
+app.post('/api/family-polls', (req, res) => {
+  const title = typeof req.body.title === 'string' ? req.body.title.trim().slice(0, 60) : '';
+  const description = typeof req.body.description === 'string' ? req.body.description.trim().slice(0, 180) : '';
+  const creatorId = positiveInt(req.body.created_by);
+  const deadline = isDate(req.body.deadline) ? req.body.deadline : '';
+  const options = Array.isArray(req.body.options) ? [...new Set(req.body.options.map(item => typeof item === 'string' ? item.trim().slice(0, 40) : '').filter(Boolean))].slice(0, 8) : [];
+  if (title.length < 2 || !creatorId || options.length < 2) return res.status(400).json({ error: '请填写投票标题、至少两项选项，并选择发起人' });
+  if (!db.prepare('SELECT 1 FROM users WHERE id = ?').get(creatorId)) return res.status(404).json({ error: '发起人不存在' });
+  const shareCode = createFamilyPollCode();
+  const pollId = db.transaction(() => {
+    const info = db.prepare('INSERT INTO family_polls (share_code, title, description, deadline, created_by) VALUES (?, ?, ?, ?, ?)').run(shareCode, title, description, deadline, creatorId);
+    const addOption = db.prepare('INSERT INTO family_poll_options (poll_id, label, sort_order) VALUES (?, ?, ?)');
+    options.forEach((label, index) => addOption.run(info.lastInsertRowid, label, index));
+    return info.lastInsertRowid;
+  })();
+  const poll = familyPollRecord(db.prepare('SELECT * FROM family_polls WHERE id = ?').get(pollId));
+  broadcast({ type: 'family_poll_created', poll });
+  res.status(201).json(poll);
+});
+
+app.get('/api/family-polls/share/:code', (req, res) => {
+  const code = typeof req.params.code === 'string' ? req.params.code.slice(0, 30) : '';
+  const poll = db.prepare('SELECT * FROM family_polls WHERE share_code = ?').get(code);
+  if (!poll) return res.status(404).json({ error: '投票链接不存在或已失效' });
+  res.json(familyPollRecord(poll, typeof req.query.voter_key === 'string' ? req.query.voter_key.slice(0, 80) : ''));
+});
+
+app.post('/api/family-polls/share/:code/vote', (req, res) => {
+  const code = typeof req.params.code === 'string' ? req.params.code.slice(0, 30) : '';
+  const optionId = positiveInt(req.body.option_id);
+  const voterKey = typeof req.body.voter_key === 'string' ? req.body.voter_key.trim().slice(0, 80) : '';
+  const voterName = typeof req.body.voter_name === 'string' ? req.body.voter_name.trim().slice(0, 20) : '';
+  const poll = db.prepare('SELECT * FROM family_polls WHERE share_code = ?').get(code);
+  if (!poll || poll.status !== 'open') return res.status(400).json({ error: '投票不存在或已结束' });
+  if (poll.deadline && poll.deadline < todayStr()) return res.status(400).json({ error: '投票已到截止日期' });
+  if (!optionId || !voterKey || !voterName) return res.status(400).json({ error: '请选择选项并填写昵称' });
+  if (!db.prepare('SELECT 1 FROM family_poll_options WHERE id = ? AND poll_id = ?').get(optionId, poll.id)) return res.status(400).json({ error: '投票选项无效' });
+  db.prepare("INSERT INTO family_poll_votes (poll_id, option_id, voter_key, voter_name) VALUES (?, ?, ?, ?) ON CONFLICT(poll_id, voter_key) DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, created_at = datetime('now', 'localtime')").run(poll.id, optionId, voterKey, voterName);
+  const result = familyPollRecord(poll, voterKey);
+  broadcast({ type: 'family_poll_updated', poll_id: poll.id, share_code: poll.share_code });
+  res.json(result);
+});
+
+app.post('/api/family-polls/:id/close', (req, res) => {
+  const pollId = positiveInt(req.params.id);
+  const userId = positiveInt(req.body.user_id);
+  const poll = db.prepare('SELECT * FROM family_polls WHERE id = ?').get(pollId);
+  if (!poll) return res.status(404).json({ error: '投票不存在' });
+  if (!userId || poll.created_by !== userId) return res.status(403).json({ error: '只有发起人可以结束投票' });
+  db.prepare("UPDATE family_polls SET status = 'closed' WHERE id = ?").run(pollId);
+  broadcast({ type: 'family_poll_closed', poll_id: pollId, share_code: poll.share_code });
+  res.json(familyPollRecord({ ...poll, status: 'closed' }));
 });
 
 // ---------- 提醒 API ----------

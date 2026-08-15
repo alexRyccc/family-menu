@@ -20,7 +20,8 @@
     repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
     notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'), notesWeekSummary: $('#notesWeekSummary'), noteIsTask: $('#noteIsTask'), noteDueDate: $('#noteDueDate'), notePriority: $('#notePriority'), notesCalendar: $('#notesCalendar'), notesAgenda: $('#notesAgenda'), notesCalendarTitle: $('#notesCalendarTitle'),
     petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus'), petCareTypeFilter: $('#petCareTypeFilter'), petDetailContent: $('#petDetailContent'), petRecordClinic: $('#petRecordClinic'), petRecordMedication: $('#petRecordMedication'), petRecordWeight: $('#petRecordWeight'), petRecordInterval: $('#petRecordInterval'), petRecordAttachment: $('#petRecordAttachment'),
-    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), recommendationTimeline: $('#recommendationTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary')
+    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), recommendationTimeline: $('#recommendationTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary'),
+    pollsView: $('#pollsView'), pollsList: $('#pollsList'), pollTitle: $('#pollTitle'), pollDescription: $('#pollDescription'), pollDeadline: $('#pollDeadline'), pollAuthor: $('#pollAuthor'), pollOptionInputs: $('#pollOptionInputs'), pollCreateStatus: $('#pollCreateStatus'), sharedPollContent: $('#sharedPollContent')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
@@ -35,7 +36,7 @@
   ];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], familyTimeline: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', mapRecommendationId: null, preferences: [], homeDashboard: null
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], familyTimeline: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', recommendationVisit: 'all', recommendationRatingFilter: 0, recommendationTravelOnly: false, mapRecommendationId: null, preferences: [], homeDashboard: null, familyPolls: [], sharedPoll: null
   };
   let toastTimer;
   let lastFocus = null;
@@ -125,13 +126,15 @@
     document.body.classList.toggle('app-notes', view === 'notes');
     document.body.classList.toggle('app-pets', view === 'pets');
     document.body.classList.toggle('app-recommendations', view === 'recommendations');
+    document.body.classList.toggle('app-polls', view === 'polls');
     $('#homeScreen').classList.toggle('hidden', view !== 'home');
     $('#main').classList.toggle('hidden', view !== 'menu');
     dom.notesView.classList.toggle('hidden', view !== 'notes');
     dom.petsView.classList.toggle('hidden', view !== 'pets');
     dom.recommendationsView.classList.toggle('hidden', view !== 'recommendations');
+    dom.pollsView.classList.toggle('hidden', view !== 'polls');
     dom.stepBar.classList.toggle('hidden', view !== 'menu' || state.currentStep === 1);
-    $('#topbarContext').textContent = view === 'notes' ? '猫家记事本' : view === 'pets' ? '猫咪清单' : view === 'recommendations' ? '推荐清单' : '猫家点菜';
+    $('#topbarContext').textContent = view === 'notes' ? '猫家记事本' : view === 'pets' ? '猫咪清单' : view === 'recommendations' ? '推荐清单' : view === 'polls' ? '家庭投票' : '猫家点菜';
     if (view === 'home') loadHomeData().catch(error => toast(error.message, 'error'));
     if (view === 'notes') {
       renderNoteForm();
@@ -140,6 +143,7 @@
     }
     if (view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(error => toast(error.message, 'error'));
     if (view === 'recommendations') loadRecommendationData().catch(error => toast(error.message, 'error'));
+    if (view === 'polls') loadFamilyPolls().catch(error => toast(error.message, 'error'));
     window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
 
@@ -735,7 +739,10 @@
       const year = String(item.visited_label || item.created_at || '').slice(0, 4);
       return (state.recommendationFilter === 'all' || item.kind === state.recommendationFilter)
         && (state.recommendationRegion === 'all' || item.region === state.recommendationRegion)
-        && (state.recommendationYear === 'all' || year === state.recommendationYear);
+        && (state.recommendationYear === 'all' || year === state.recommendationYear)
+        && (state.recommendationVisit === 'all' || item.visit_status === state.recommendationVisit)
+        && (!state.recommendationRatingFilter || Number(item.rating) >= state.recommendationRatingFilter)
+        && (!state.recommendationTravelOnly || Boolean(item.travel_key));
     });
     const located = state.savedRecommendations.filter(hasCoordinates).length;
     const travelCities = state.savedRecommendations.filter(item => item.travel_key).length;
@@ -801,6 +808,221 @@
     renderRecommendations();
     renderCheckins();
     renderRecommendationTimeline();
+  }
+
+  function pollVoterKey() {
+    let key = localStorage.getItem('fm_family_poll_voter_key');
+    if (!key) {
+      key = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem('fm_family_poll_voter_key', key);
+    }
+    return key;
+  }
+
+  function pollShareUrl(code) {
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.hash = '';
+    url.searchParams.set('vote', code);
+    return url.toString();
+  }
+
+  function pollState(poll) {
+    if (poll.status === 'closed') return { label: '已结束', className: 'closed' };
+    if (poll.deadline && poll.deadline < today()) return { label: '已截止', className: 'closed' };
+    return { label: '进行中', className: 'open' };
+  }
+
+  function pollOptionMarkup(option, totalVotes, selected, interactive = false) {
+    const percent = totalVotes ? Math.round((Number(option.vote_count) / totalVotes) * 100) : 0;
+    const content = `<span class="family-poll-option-label">${esc(option.label)}</span><span class="family-poll-option-count">${Number(option.vote_count)} 票${totalVotes ? ` · ${percent}%` : ''}</span><span class="family-poll-option-bar" aria-hidden="true"><i style="width:${percent}%"></i></span>`;
+    return interactive
+      ? `<button type="button" class="family-poll-option ${selected ? 'is-selected' : ''}" data-shared-poll-option="${option.id}" aria-pressed="${selected}">${content}</button>`
+      : `<div class="family-poll-option ${selected ? 'is-selected' : ''}">${content}</div>`;
+  }
+
+  function renderFamilyPolls() {
+    dom.pollsList.innerHTML = state.familyPolls.map(poll => {
+      const status = pollState(poll);
+      const owner = state.me?.id === poll.created_by;
+      const deadline = poll.deadline ? `截止 ${poll.deadline}` : '未设置截止日期';
+      return `<article class="family-poll-card"><div class="family-poll-card-top"><span class="family-poll-status ${status.className}">${status.label}</span><small>${esc(deadline)} · ${Number(poll.total_votes)} 人已投</small></div><h2>${esc(poll.title)}</h2>${poll.description ? `<p>${esc(poll.description)}</p>` : ''}<div class="family-poll-options">${poll.options.map(option => pollOptionMarkup(option, Number(poll.total_votes), false)).join('')}</div><footer><small>${poll.author ? `${esc(poll.author.avatar || '')} ${esc(poll.author.name)} 发起` : '家庭成员发起'}</small><div><button type="button" data-open-family-poll="${esc(poll.share_code)}">查看 / 投票</button><button type="button" data-share-family-poll="${esc(poll.share_code)}">分享链接</button>${owner && status.className === 'open' ? `<button type="button" data-close-family-poll="${poll.id}">结束</button>` : ''}</div></footer></article>`;
+    }).join('') || '<div class="notes-empty"><strong>还没有家庭投票</strong><span>从下一次晚餐、出行或采购决定开始吧。</span></div>';
+  }
+
+  async function loadFamilyPolls() {
+    state.familyPolls = await api('/api/family-polls');
+    renderFamilyPolls();
+  }
+
+  async function runMenuQuick(action) {
+    if (action === 'tomorrow') return changeMealDate(1);
+    if (action === 'meal') {
+      state.meal = state.meal === 'lunch' ? 'dinner' : 'lunch';
+      localStorage.setItem('fm_last_meal', state.meal);
+      setStep(3);
+      await Promise.all([loadDishes(), refreshDashboard(), loadRecentSelection()]);
+      return toast(`已切换到${mealName(state.meal)}`, 'info');
+    }
+    if (action === 'surprise') return $('#btnShake').click();
+    if (action === 'shopping') return openShoppingList();
+    if (action === 'vote') { await showVotes(); return openModal('votesModal'); }
+  }
+
+  function openNoteQuick(action) {
+    if (action === 'agenda') return $('#notesAgendaTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (action === 'priority') {
+      state.noteViewFilter = 'high';
+      $$('.notes-tools [data-note-view-filter]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.noteViewFilter === 'high')));
+      return renderSharedNotes();
+    }
+    openNoteComposer();
+    dom.noteDate.value = today();
+    if (action === 'task') {
+      dom.noteIsTask.checked = true;
+      dom.noteDueDate.disabled = false;
+      dom.noteDueDate.value = today();
+      dom.notePriority.value = 'normal';
+      dom.noteContent.value = '待办：';
+    }
+    if (action === 'shopping') {
+      dom.noteIsTask.checked = true;
+      dom.noteDueDate.disabled = false;
+      dom.noteDueDate.value = today();
+      dom.noteContent.value = '#采购 ';
+    }
+    if (action === 'mention') {
+      $$('#mentionPicker input').forEach(input => { input.checked = true; });
+      $('#btnMentionAll').textContent = '取消全部提醒';
+      dom.noteContent.value = '@大家 ';
+      dom.notePriority.value = 'high';
+    }
+    updateNoteCount();
+    saveNoteDraft();
+    dom.noteContent.focus();
+  }
+
+  function openPetQuick(careType) {
+    openPetRecordForm();
+    dom.petRecordType.value = careType;
+    dom.petRecordInterval.value = String(petTemplateInterval(Number(dom.petRecordPet.value), careType));
+    if (careType === 'weight') dom.petRecordNote.value = '例行体重记录';
+    updatePetRecordCount();
+  }
+
+  function runRecommendationQuick(action) {
+    if (action === 'checkin') return openCheckinForm();
+    state.recommendationVisit = action === 'want' ? 'want' : action === 'visited' ? 'visited' : 'all';
+    state.recommendationRatingFilter = action === 'rating' ? 5 : 0;
+    state.recommendationTravelOnly = action === 'travel';
+    renderRecommendations();
+    $('#recommendationsListTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function addPollOptionInput(value = '') {
+    const inputs = dom.pollOptionInputs.querySelectorAll('[data-poll-option]');
+    if (inputs.length >= 8) return toast('候选项最多八个', 'info');
+    const row = document.createElement('div');
+    row.className = 'poll-option-input';
+    row.innerHTML = `<input data-poll-option type="text" maxlength="40" value="${esc(value)}" placeholder="填写一个候选项" aria-label="候选项 ${inputs.length + 1}">${inputs.length >= 2 ? '<button type="button" data-remove-poll-option aria-label="删除这个候选项">×</button>' : ''}`;
+    dom.pollOptionInputs.append(row);
+  }
+
+  const pollTemplates = {
+    dinner: { title: '今晚吃什么？', description: '选一个大家都想吃的，晚饭就这么定。', options: ['家常菜', '火锅', '外卖'] },
+    outing: { title: '周末去哪里？', description: '选一个轻松的安排，一起出门。', options: ['散步逛街', '看电影', '找家店吃饭'] },
+    chores: { title: '这周家务怎么分？', description: '每个人选一项，轻松把家里安排好。', options: ['洗衣收纳', '采购补货', '做饭洗碗'] },
+    shopping: { title: '这次优先买什么？', description: '预算有限时，先决定最重要的一样。', options: ['家用消耗品', '猫咪用品', '想买的小物'] },
+    date: { title: '哪天最方便？', description: '选一个大家方便的日期。', options: ['周五晚上', '周六白天', '周日白天'] }
+  };
+
+  function openPollComposer(template = null) {
+    const preset = template ? pollTemplates[template] : null;
+    dom.pollTitle.value = '';
+    dom.pollDescription.value = '';
+    dom.pollDeadline.value = '';
+    dom.pollCreateStatus.textContent = '';
+    dom.pollAuthor.innerHTML = state.users.map(user => `<option value="${user.id}">${esc(user.avatar)} ${esc(user.name)}</option>`).join('');
+    dom.pollAuthor.value = String(state.me?.id || state.users[0]?.id || '');
+    dom.pollOptionInputs.replaceChildren();
+    (preset?.options || ['选项一', '选项二', '还没想好']).forEach(addPollOptionInput);
+    if (preset) {
+      dom.pollTitle.value = preset.title;
+      dom.pollDescription.value = preset.description;
+    }
+    openModal('pollComposerModal');
+  }
+
+  async function createFamilyPoll() {
+    const button = $('#btnCreateFamilyPoll');
+    const options = [...dom.pollOptionInputs.querySelectorAll('[data-poll-option]')].map(input => input.value.trim()).filter(Boolean);
+    button.disabled = true;
+    dom.pollCreateStatus.textContent = '正在创建投票…';
+    try {
+      const poll = await api('/api/family-polls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: dom.pollTitle.value, description: dom.pollDescription.value, deadline: dom.pollDeadline.value, created_by: Number(dom.pollAuthor.value), options }) });
+      closeModal('pollComposerModal');
+      await loadFamilyPolls();
+      const copied = await copyFamilyPollLink(poll.share_code);
+      toast(copied ? '投票已创建，分享链接已复制' : '投票已创建，请点击卡片中的“分享链接”发送给家人', copied ? 'success' : 'info');
+    } finally {
+      button.disabled = false;
+      dom.pollCreateStatus.textContent = '';
+    }
+  }
+
+  async function copyFamilyPollLink(code, preferShare = false) {
+    const url = pollShareUrl(code);
+    if (preferShare && navigator.share) {
+      try { await navigator.share({ title: '家庭投票', text: '来投一票，一起做决定。', url }); return true; } catch (error) { if (error.name !== 'AbortError') throw error; return false; }
+    }
+    try {
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(url); return true; }
+      const input = document.createElement('textarea');
+      input.value = url;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.append(input);
+      input.select();
+      const copied = document.execCommand('copy');
+      input.remove();
+      return copied;
+    } catch (_) { return false; }
+  }
+
+  function renderSharedPoll() {
+    const poll = state.sharedPoll;
+    if (!poll) return;
+    const status = pollState(poll);
+    const name = localStorage.getItem('fm_family_poll_voter_name') || state.me?.name || '';
+    const canVote = status.className === 'open';
+    dom.sharedPollContent.innerHTML = `<div class="shared-poll-heading"><span class="family-poll-status ${status.className}">${status.label}</span><h3>${esc(poll.title)}</h3>${poll.description ? `<p>${esc(poll.description)}</p>` : ''}<small>${poll.deadline ? `截止 ${esc(poll.deadline)}` : '未设置截止日期'} · ${Number(poll.total_votes)} 人已投</small></div>${canVote ? `<label class="poll-voter-name" for="sharedPollVoterName">你的称呼<input id="sharedPollVoterName" type="text" maxlength="20" value="${esc(name)}" placeholder="例如：猫姨姨"></label>` : ''}<div class="shared-poll-options">${poll.options.map(option => pollOptionMarkup(option, Number(poll.total_votes), poll.voter_choice === option.id, canVote)).join('')}</div><p class="shared-poll-hint">${canVote ? (poll.voter_choice ? '已投过票，点其他选项可以改票。' : '选择一个选项即可投票。') : '投票已结束，结果会保留在这里。'}</p>`;
+  }
+
+  async function openSharedPoll(code) {
+    state.sharedPoll = await api(`/api/family-polls/share/${encodeURIComponent(code)}?voter_key=${encodeURIComponent(pollVoterKey())}`);
+    renderSharedPoll();
+    openModal('sharedPollModal');
+  }
+
+  async function voteSharedPoll(optionId) {
+    if (!state.sharedPoll) return;
+    const voterName = $('#sharedPollVoterName')?.value.trim() || '';
+    if (!voterName) return toast('先写下你的称呼，再投票', 'error');
+    localStorage.setItem('fm_family_poll_voter_name', voterName);
+    const poll = await api(`/api/family-polls/share/${encodeURIComponent(state.sharedPoll.share_code)}/vote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ option_id: optionId, voter_key: pollVoterKey(), voter_name: voterName }) });
+    state.sharedPoll = poll;
+    renderSharedPoll();
+    if (state.view === 'polls') loadFamilyPolls().catch(() => {});
+    toast('你的投票已保存', 'success');
+  }
+
+  async function closeFamilyPoll(pollId) {
+    if (!state.me) return toast('请选择发起投票的家人', 'error');
+    if (!confirm('结束后大家将不能再投票，确定结束吗？')) return;
+    await api(`/api/family-polls/${pollId}/close`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id }) });
+    await loadFamilyPolls();
+    toast('投票已结束', 'success');
   }
 
   function openRecommendationForm() {
@@ -915,6 +1137,7 @@
 
   function closeModal(id) {
     $(`#${id}`)?.classList.add('hidden');
+    if (id === 'sharedPollModal' && new URLSearchParams(window.location.search).has('vote')) history.replaceState({}, '', window.location.pathname);
     if ($$('.modal-overlay:not(.hidden)').length === 0) document.body.style.overflow = '';
     if (lastFocus?.isConnected) lastFocus.focus();
   }
@@ -1381,6 +1604,10 @@
       if (data.type === 'recommendation' || data.type === 'recommendation_checkin') {
         if (state.view === 'recommendations') loadRecommendationData().catch(() => {});
       }
+      if (['family_poll_created', 'family_poll_updated', 'family_poll_closed'].includes(data.type)) {
+        if (state.view === 'polls') loadFamilyPolls().catch(() => {});
+        if (!$('#sharedPollModal').classList.contains('hidden') && state.sharedPoll?.share_code === data.share_code) openSharedPoll(data.share_code).catch(() => {});
+      }
       if (data.type === 'selection_note' && state.view === 'menu' && data.date === state.date) refreshDashboard().catch(() => {});
       if (state.view === 'home' && ['shared_note', 'shared_note_deleted', 'shared_note_pinned', 'shared_note_task', 'pet_care_record', 'recommendation', 'recommendation_checkin', 'notification'].includes(data.type)) loadHomeData().catch(() => {});
     };
@@ -1395,12 +1622,18 @@
       if (button.id === 'btnOpenNotes') return setView('notes');
       if (button.id === 'btnOpenPets') return setView('pets');
       if (button.id === 'btnOpenRecommendations') return setView('recommendations');
+      if (button.id === 'btnOpenPolls') return setView('polls');
+      if (button.dataset.menuQuick) return runMenuQuick(button.dataset.menuQuick);
+      if (button.dataset.noteQuick) return openNoteQuick(button.dataset.noteQuick);
+      if (button.dataset.petQuick) return openPetQuick(button.dataset.petQuick);
+      if (button.dataset.recommendationQuick) return runRecommendationQuick(button.dataset.recommendationQuick);
+      if (button.dataset.pollTemplate) return openPollComposer(button.dataset.pollTemplate);
       if (button.id === 'btnRefreshHome') return loadHomeData();
       if (button.id === 'btnOpenPreferences') return openPreferences();
       if (button.id === 'btnSavePreferences') return savePreferences();
       if (button.id === 'btnOpenShopping') return openShoppingList();
       if (button.id === 'btnCopyShoppingList') return copyDailyShoppingList();
-      if (button.id === 'btnHome' || button.id === 'btnNotesBack' || button.id === 'btnRecommendationsBack') return setView('home');
+      if (button.id === 'btnHome' || button.id === 'btnNotesBack' || button.id === 'btnRecommendationsBack' || button.id === 'btnPollsBack') return setView('home');
       if (button.id === 'btnPetsBack') return setView('home');
       if (button.id === 'btnOpenNote') return openNoteComposer();
       if (button.id === 'btnCreateNote') return createSharedNote();
@@ -1415,6 +1648,14 @@
       if (button.id === 'btnSavePetRecord') return createPetRecord();
       if (button.id === 'btnPetDetailRecord') { const petId = state.selectedPetId; closeModal('petDetailModal'); openPetRecordForm(); if (petId) dom.petRecordPet.value = String(petId); return; }
       if (button.id === 'btnOpenRecommendation') return openRecommendationForm();
+      if (button.id === 'btnOpenPollComposer') return openPollComposer();
+      if (button.id === 'btnCreateFamilyPoll') return createFamilyPoll();
+      if (button.id === 'btnAddPollOption') return addPollOptionInput();
+      if (button.dataset.removePollOption !== undefined) { button.parentElement?.remove(); return; }
+      if (button.dataset.openFamilyPoll) return openSharedPoll(button.dataset.openFamilyPoll);
+      if (button.dataset.shareFamilyPoll) { const shared = await copyFamilyPollLink(button.dataset.shareFamilyPoll, true); return toast(shared ? '投票链接已准备好' : '未能自动分享，可从地址栏复制链接', shared ? 'success' : 'info'); }
+      if (button.dataset.sharedPollOption) return voteSharedPoll(Number(button.dataset.sharedPollOption));
+      if (button.dataset.closeFamilyPoll) return closeFamilyPoll(Number(button.dataset.closeFamilyPoll));
       if (button.id === 'btnSaveRecommendation') return createRecommendation();
       if (button.id === 'btnOpenCheckin') return openCheckinForm();
       if (button.id === 'btnSaveCheckin') return createCheckin();
@@ -1573,6 +1814,8 @@
       if (state.me) { updateIdentity(); setStep(2); await Promise.all([refreshDashboard(), loadPreferences()]); } else { setStep(1); renderPreferenceBar(); }
       connectEvents();
       setView('home');
+      const sharedCode = new URLSearchParams(window.location.search).get('vote');
+      if (sharedCode) openSharedPoll(sharedCode).catch(error => toast(error.message, 'error'));
     } catch (error) { dom.whoError.classList.remove('hidden'); toast(error.message, 'error'); }
   }
 
