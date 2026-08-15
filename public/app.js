@@ -20,7 +20,7 @@
     repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
     notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'), notesWeekSummary: $('#notesWeekSummary'), noteIsTask: $('#noteIsTask'), noteDueDate: $('#noteDueDate'), notePriority: $('#notePriority'), notesCalendar: $('#notesCalendar'), notesAgenda: $('#notesAgenda'), notesCalendarTitle: $('#notesCalendarTitle'),
     petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus'), petCareTypeFilter: $('#petCareTypeFilter'), petDetailContent: $('#petDetailContent'), petRecordClinic: $('#petRecordClinic'), petRecordMedication: $('#petRecordMedication'), petRecordWeight: $('#petRecordWeight'), petRecordInterval: $('#petRecordInterval'), petRecordAttachment: $('#petRecordAttachment'),
-    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), homeTimeline: $('#homeTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary')
+    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), recommendationTimeline: $('#recommendationTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
@@ -35,7 +35,7 @@
   ];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', mapRecommendationId: null, preferences: [], homeDashboard: null, homeEvents: []
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], familyTimeline: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', mapRecommendationId: null, preferences: [], homeDashboard: null
   };
   let toastTimer;
   let lastFocus = null;
@@ -158,14 +158,12 @@
       { icon: '📍', title: '待打卡地点', count: (dashboard.want_to_visit || []).length, detail: dashboard.want_to_visit?.[0]?.title || '暂时没有想去清单' }
     ];
     dom.homeTodos.innerHTML = todoGroups.map(item => `<button type="button" class="home-todo" data-home-jump="${item.title}"><span>${item.icon}</span><b>${item.count}</b><strong>${item.title}</strong><small>${esc(item.detail)}</small></button>`).join('');
-    dom.homeTimeline.innerHTML = state.homeEvents.map(item => `<article class="home-timeline-entry"><span>${timelineIcon(item.kind)}</span><div><strong>${esc(item.title)}</strong><p>${esc(item.actor_name || '家人')} · ${esc(item.detail || '')}</p></div><time>${esc(String(item.happened_at || '').slice(5, 16))}</time></article>`).join('') || '<div class="notes-empty"><strong>家庭时间线刚刚开始</strong><span>点一次菜、记一件事或登记护理后，会在这里留下痕迹。</span></div>';
   }
 
   async function loadHomeData() {
     const userQuery = state.me?.id ? `?user_id=${state.me.id}` : '';
-    const [dashboard, events] = await Promise.all([api(`/api/home-dashboard${userQuery}`), api('/api/family-timeline?limit=18')]);
+    const dashboard = await api(`/api/home-dashboard${userQuery}`);
     state.homeDashboard = dashboard;
-    state.homeEvents = events;
     renderHomeData();
   }
 
@@ -788,14 +786,21 @@
     dom.checkinList.innerHTML = state.checkins.map(item => `<article class="checkin-entry"><div class="checkin-marker">●</div><div><div class="checkin-entry-top"><strong>${esc(item.recommendation_title || '独立打卡')}</strong><time>${esc(item.checkin_date)}</time></div><p>${esc(locationText(item))}</p>${item.note ? `<p class="checkin-note">${esc(item.note)}</p>` : ''}<small>${item.author_name ? `${esc(item.author_avatar || '')} ${esc(item.author_name)} 记录` : '家人记录'}</small></div><button type="button" data-show-checkin="${item.id}">地图</button></article>`).join('') || '<div class="notes-empty"><strong>还没有打卡记录</strong><span>到店、逛街或发现新地方时，记下一次真实体验。</span></div>';
   }
 
+  function renderRecommendationTimeline() {
+    const events = state.familyTimeline;
+    dom.recommendationTimeline.innerHTML = events.length ? `<div class="recommendation-timeline-track">${events.map(item => `<article class="recommendation-timeline-item"><span class="recommendation-timeline-node">${timelineIcon(item.kind)}</span><time>${esc(String(item.happened_at || '').slice(0, 10))}</time><strong>${esc(item.title)}</strong><p>${esc(item.actor_name || '猫家')} · ${esc(item.detail || '')}</p></article>`).join('')}</div>` : '<div class="notes-empty"><strong>足迹还在慢慢累积</strong><span>一次打卡、一顿饭或一条记录，都会留在这里。</span></div>';
+  }
+
   async function loadRecommendationData() {
-    const [recommendations, checkins] = await Promise.all([api('/api/family-recommendations'), api('/api/family-checkins')]);
+    const [recommendations, checkins, timeline] = await Promise.all([api('/api/family-recommendations'), api('/api/family-checkins'), api('/api/family-timeline?limit=36')]);
     state.savedRecommendations = recommendations;
     state.checkins = checkins;
+    state.familyTimeline = timeline;
     renderRecommendationForms();
     renderRecommendationRegions();
     renderRecommendations();
     renderCheckins();
+    renderRecommendationTimeline();
   }
 
   function openRecommendationForm() {
