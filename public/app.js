@@ -18,7 +18,7 @@
     dishCategory: $('#dishCat'), history: $('#historyList'), weekly: $('#weeklyGrid'), voteList: $('#votesList'),
     voteDishes: $('#voteDishGrid'), notifyTargets: $('#notifyTargetList'), planTitle: $('#planTitle'), planProgress: $('#planProgress'), tableNote: $('#tableNote'), pendingPeople: $('#pendingPeople'), celebration: $('#celebrationLayer'), notifyStatus: $('#notifyStatus'),
     repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
-    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'), notesWeekSummary: $('#notesWeekSummary'), noteIsTask: $('#noteIsTask'), noteDueDate: $('#noteDueDate'),
+    notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'), notesWeekSummary: $('#notesWeekSummary'), noteIsTask: $('#noteIsTask'), noteDueDate: $('#noteDueDate'), notePriority: $('#notePriority'), notesCalendar: $('#notesCalendar'), notesAgenda: $('#notesAgenda'), notesCalendarTitle: $('#notesCalendarTitle'),
     petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus'), petCareTypeFilter: $('#petCareTypeFilter'), petDetailContent: $('#petDetailContent'), petRecordClinic: $('#petRecordClinic'), petRecordMedication: $('#petRecordMedication'), petRecordWeight: $('#petRecordWeight'), petRecordInterval: $('#petRecordInterval'), petRecordAttachment: $('#petRecordAttachment'),
     recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), homeTimeline: $('#homeTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary')
   };
@@ -35,7 +35,7 @@
   ];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteSummary: null, justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', mapRecommendationId: null, preferences: [], homeDashboard: null, homeEvents: []
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', mapRecommendationId: null, preferences: [], homeDashboard: null, homeEvents: []
   };
   let toastTimer;
   let lastFocus = null;
@@ -136,6 +136,7 @@
     if (view === 'notes') {
       renderNoteForm();
       loadSharedNotes().catch(error => toast(error.message, 'error'));
+      loadNotesOverview().catch(error => toast(error.message, 'error'));
     }
     if (view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(error => toast(error.message, 'error'));
     if (view === 'recommendations') loadRecommendationData().catch(error => toast(error.message, 'error'));
@@ -152,7 +153,7 @@
     const meals = Object.fromEntries((dashboard.meals || []).map(item => [item.meal, item.count]));
     const todoGroups = [
       { icon: '🍚', title: '未选餐', count: Math.max(0, state.users.length * 2 - (meals.lunch || 0) - (meals.dinner || 0)), detail: '今天还有餐别待选择' },
-      { icon: '@', title: '待办与提醒', count: (dashboard.tasks || []).length + (dashboard.mentions || []).length, detail: dashboard.tasks?.[0]?.content || dashboard.mentions?.[0]?.content || '暂时没有新提醒' },
+      { icon: '@', title: '待办与提醒', count: (dashboard.tasks || []).length + (dashboard.mentions || []).length, detail: dashboard.tasks?.[0] ? `${dashboard.tasks[0].priority === 'urgent' ? '紧急 · ' : ''}${dashboard.tasks[0].content}` : dashboard.mentions?.[0]?.content || '暂时没有新提醒' },
       { icon: '🐾', title: '临近护理', count: (dashboard.pet_tasks || []).length, detail: dashboard.pet_tasks?.[0] ? `${dashboard.pet_tasks[0].pet_name} · ${careLabel(dashboard.pet_tasks[0].care_type)}` : '近期没有安排' },
       { icon: '📍', title: '待打卡地点', count: (dashboard.want_to_visit || []).length, detail: dashboard.want_to_visit?.[0]?.title || '暂时没有想去清单' }
     ];
@@ -249,7 +250,8 @@
       content: dom.noteContent.value.slice(0, 1000),
       mentions: $$('#mentionPicker input:checked').map(input => Number(input.value)),
       isTask: dom.noteIsTask.checked,
-      dueDate: dom.noteDueDate.value
+      dueDate: dom.noteDueDate.value,
+      priority: dom.notePriority.value
     };
     localStorage.setItem('fm_note_draft', JSON.stringify(draft));
   }
@@ -265,6 +267,7 @@
     dom.noteIsTask.checked = Boolean(draft?.isTask);
     dom.noteDueDate.disabled = !dom.noteIsTask.checked;
     dom.noteDueDate.value = draft?.dueDate || '';
+    dom.notePriority.value = priorityMeta[draft?.priority] ? draft.priority : 'normal';
     const mentions = new Set(Array.isArray(draft?.mentions) ? draft.mentions : []);
     $$('#mentionPicker input').forEach(input => { input.checked = mentions.has(Number(input.value)); });
     updateNoteCount();
@@ -274,12 +277,96 @@
     dom.noteCount.textContent = `${dom.noteContent.value.length} / 1000`;
   }
 
+  const priorityMeta = {
+    low: { label: '低', icon: '○' }, normal: { label: '普通', icon: '·' }, high: { label: '高', icon: '▲' }, urgent: { label: '紧急', icon: '!' }
+  };
+
+  function notePriorityBadge(priority) {
+    const meta = priorityMeta[priority] || priorityMeta.normal;
+    return priority && priority !== 'normal' ? `<span class="note-priority note-priority-${esc(priority)}" title="${esc(meta.label)}优先级">${meta.icon} ${esc(meta.label)}</span>` : '';
+  }
+
+  function monthLabel(month) {
+    const [year, value] = month.split('-').map(Number);
+    return `${year} 年 ${value} 月`;
+  }
+
+  function shiftNotesMonth(change) {
+    const date = new Date(`${state.noteCalendarMonth}-01T00:00:00`);
+    date.setMonth(date.getMonth() + change);
+    state.noteCalendarMonth = localDate(date).slice(0, 7);
+    loadNotesOverview().catch(error => toast(error.message, 'error'));
+  }
+
+  function renderNotesCalendar() {
+    const month = state.noteCalendarMonth;
+    const [year, monthNumber] = month.split('-').map(Number);
+    const first = new Date(year, monthNumber - 1, 1);
+    const daysInMonth = new Date(year, monthNumber, 0).getDate();
+    const leading = (first.getDay() + 6) % 7;
+    const byDate = new Map(state.noteCalendarDays.map(item => [item.date, item]));
+    dom.notesCalendarTitle.textContent = monthLabel(month);
+    const cells = [];
+    for (let index = 0; index < leading; index += 1) cells.push('<span class="notes-calendar-spacer" aria-hidden="true"></span>');
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = `${month}-${String(day).padStart(2, '0')}`;
+      const summary = byDate.get(date);
+      const classes = [
+        'notes-calendar-day',
+        date === dom.noteDate.value ? 'is-selected' : '',
+        date === today() ? 'is-today' : '',
+        summary?.total ? 'has-record' : '',
+        summary?.open_tasks ? 'has-open-task' : '',
+        summary?.urgent_priority ? 'has-urgent' : ''
+      ].filter(Boolean).join(' ');
+      const label = `${date}${summary?.total ? `，${summary.total} 条记录` : '，无记录'}${summary?.open_tasks ? `，${summary.open_tasks} 条未完成待办` : ''}${summary?.urgent_priority ? '，有紧急事项' : ''}`;
+      cells.push(`<button type="button" class="${classes}" data-note-date="${date}" aria-label="${esc(label)}" aria-pressed="${date === dom.noteDate.value}"><span>${day}</span>${summary?.total ? `<small>${summary.total}</small>` : ''}<i class="note-calendar-markers">${summary?.total ? '<b class="note-dot-record"></b>' : ''}${summary?.open_tasks ? '<b class="note-dot-task"></b>' : ''}${summary?.urgent_priority ? '<b class="note-dot-urgent"></b>' : ''}</i></button>`);
+    }
+    dom.notesCalendar.innerHTML = cells.join('');
+  }
+
+  function renderNotesAgenda() {
+    const notes = state.noteAgenda;
+    if (!notes.length) {
+      dom.notesAgenda.innerHTML = '<p class="notes-agenda-empty">未来 21 天没有未完成待办，轻松一些也挺好。</p>';
+      return;
+    }
+    dom.notesAgenda.innerHTML = notes.map(note => {
+      const overdue = note.due_date && note.due_date < today();
+      const date = note.due_date || note.note_date;
+      return `<button type="button" class="notes-agenda-item ${overdue ? 'is-overdue' : ''}" data-note-date="${esc(note.note_date)}"><span class="notes-agenda-date">${overdue ? '已逾期' : note.due_date ? date.slice(5) : '无截止'}</span><div><strong>${esc(note.content)}</strong><small>${note.author_avatar || ''} ${esc(note.author_name)} · ${note.due_date ? `截止 ${note.due_date}` : `记录于 ${note.note_date}`}</small></div>${notePriorityBadge(note.priority)}</button>`;
+    }).join('');
+  }
+
+  async function loadNotesOverview() {
+    const [calendar, agenda] = await Promise.all([
+      api(`/api/shared-notes/calendar?month=${encodeURIComponent(state.noteCalendarMonth)}`),
+      api(`/api/shared-notes/agenda?from=${encodeURIComponent(today())}&days=21`)
+    ]);
+    state.noteCalendarMonth = calendar.month;
+    state.noteCalendarDays = calendar.days || [];
+    state.noteAgenda = agenda.notes || [];
+    renderNotesCalendar();
+    renderNotesAgenda();
+  }
+
+  function selectNotesDate(date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    dom.noteDate.value = date;
+    state.noteCalendarMonth = date.slice(0, 7);
+    loadSharedNotes().catch(error => toast(error.message, 'error'));
+    loadNotesOverview().catch(error => toast(error.message, 'error'));
+  }
+
   function renderSharedNotes() {
     const date = dom.noteDate.value || today();
     const keyword = state.noteFilter.trim().toLowerCase();
     const visibleNotes = state.notes.filter(note => {
       const matchKeyword = !keyword || `${note.content} ${note.author_name} ${note.mentions?.map(user => user.name).join(' ') || ''}`.toLowerCase().includes(keyword);
-      return matchKeyword && (!state.notePinnedOnly || note.pinned);
+      const matchView = state.noteViewFilter === 'all'
+        || (state.noteViewFilter === 'open' && note.is_task && !note.task_done)
+        || (state.noteViewFilter === 'high' && ['high', 'urgent'].includes(note.priority));
+      return matchKeyword && matchView && (!state.notePinnedOnly || note.pinned);
     });
     dom.notesDateLabel.textContent = `${dateLabel(date)} · ${visibleNotes.length}${keyword ? ` / ${state.notes.length}` : ''} 条记录`;
     $('#notesTimelineTitle').textContent = date === today() ? '今天的记录' : '当天记录';
@@ -296,7 +383,7 @@
       const due = note.is_task && note.due_date ? `<span class="note-due ${note.task_done ? '' : note.due_date < today() ? 'is-overdue' : ''}">截止 ${esc(note.due_date)}</span>` : '';
       const readState = note.mentions?.length ? `<small class="note-read-state">@ 已读 ${note.read_user_ids?.length || 0}/${note.mentions.length}</small>` : '';
       const remove = canDelete ? `<button class="note-delete" type="button" data-delete-note="${note.id}" title="删除这条记录" aria-label="删除 ${esc(note.author_name)} 的这条记录">×</button>` : '';
-      return `<article class="note-entry ${note.task_done ? 'note-task-done' : ''} ${note.pinned ? 'note-pinned' : ''} ${note.id === state.justAddedNoteId ? 'note-just-added' : ''}"><div class="note-author"><span style="background:${esc(note.author_color)}">${esc(note.author_avatar)}</span><strong>${esc(note.author_name)}</strong>${note.pinned ? '<em>固定</em>' : ''}<time>${esc(String(note.created_at || '').slice(11, 16))}</time><button class="note-copy" type="button" data-copy-note="${note.id}" title="复制这条记录" aria-label="复制 ${esc(note.author_name)} 的这条记录">⧉</button>${pin}${task}${remove}</div><p>${content}</p>${due}${mentions}${readState}</article>`;
+      return `<article class="note-entry ${note.task_done ? 'note-task-done' : ''} ${note.pinned ? 'note-pinned' : ''} ${note.id === state.justAddedNoteId ? 'note-just-added' : ''}"><div class="note-author"><span style="background:${esc(note.author_color)}">${esc(note.author_avatar)}</span><strong>${esc(note.author_name)}</strong>${notePriorityBadge(note.priority)}${note.pinned ? '<em>固定</em>' : ''}<time>${esc(String(note.created_at || '').slice(11, 16))}</time><button class="note-copy" type="button" data-copy-note="${note.id}" title="复制这条记录" aria-label="复制 ${esc(note.author_name)} 的这条记录">⧉</button>${pin}${task}${remove}</div><p>${content}</p>${due}${mentions}${readState}</article>`;
     }).join('');
   }
 
@@ -304,7 +391,7 @@
     const summary = state.noteSummary;
     if (!summary) return;
     const author = summary.authors?.[0];
-    dom.notesWeekSummary.textContent = `近 ${summary.days} 天 ${summary.total || 0} 条${summary.pinned_count ? ` · ${summary.pinned_count} 条固定` : ''}${author ? ` · ${author.avatar} ${author.name} 记录最多` : ''}`;
+    dom.notesWeekSummary.textContent = `近 ${summary.days} 天 ${summary.total || 0} 条 · 活跃 ${summary.active_days || 0} 天${summary.pinned_count ? ` · ${summary.pinned_count} 条固定` : ''}${author ? ` · ${author.avatar} ${author.name} 记录最多` : ''}`;
   }
 
   async function loadSharedNotes() {
@@ -319,6 +406,7 @@
       state.noteSummary = summary;
       renderSharedNotes();
       renderNoteSummary();
+      if (state.noteCalendarMonth === date.slice(0, 7)) loadNotesOverview().catch(() => {});
       const unreadMentionIds = state.me ? state.notes.filter(note => note.mentions?.some(user => user.id === state.me.id) && !note.read_user_ids?.includes(state.me.id)).map(note => note.id) : [];
       if (unreadMentionIds.length) api('/api/shared-notes/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id, note_ids: unreadMentionIds }) }).then(() => loadSharedNotes()).catch(() => {});
     } finally {
@@ -337,12 +425,13 @@
     button.disabled = true;
     dom.noteSaveStatus.textContent = '正在发布...';
     try {
-      const created = await api('/api/shared-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, note_date: noteDate, content, mention_user_ids: mentionUserIds, is_task: dom.noteIsTask.checked, due_date: dom.noteDueDate.value }) });
+      const created = await api('/api/shared-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, note_date: noteDate, content, mention_user_ids: mentionUserIds, is_task: dom.noteIsTask.checked, due_date: dom.noteDueDate.value, priority: dom.notePriority.value }) });
       state.justAddedNoteId = created.id;
       dom.noteContent.value = '';
       dom.noteIsTask.checked = false;
       dom.noteDueDate.value = '';
       dom.noteDueDate.disabled = true;
+      dom.notePriority.value = 'normal';
       $$('#mentionPicker input').forEach(input => { input.checked = false; });
       localStorage.removeItem('fm_note_draft');
       updateNoteCount();
@@ -1312,6 +1401,11 @@
       if (button.id === 'btnCreateNote') return createSharedNote();
       if (button.id === 'btnExportNotes') return exportCurrentNotes();
       if (button.id === 'btnNotesPinned') { state.notePinnedOnly = !state.notePinnedOnly; button.setAttribute('aria-pressed', String(state.notePinnedOnly)); button.textContent = state.notePinnedOnly ? '查看全部' : '只看固定'; return renderSharedNotes(); }
+      if (button.id === 'btnNotesMonthPrev') return shiftNotesMonth(-1);
+      if (button.id === 'btnNotesMonthToday') { state.noteCalendarMonth = today().slice(0, 7); return loadNotesOverview(); }
+      if (button.id === 'btnNotesMonthNext') return shiftNotesMonth(1);
+      if (button.dataset.noteDate) return selectNotesDate(button.dataset.noteDate);
+      if (button.dataset.noteViewFilter) { state.noteViewFilter = button.dataset.noteViewFilter; $$('.notes-tools [data-note-view-filter]').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderSharedNotes(); }
       if (button.id === 'btnOpenPetRecord') return openPetRecordForm();
       if (button.id === 'btnSavePetRecord') return createPetRecord();
       if (button.id === 'btnPetDetailRecord') { const petId = state.selectedPetId; closeModal('petDetailModal'); openPetRecordForm(); if (petId) dom.petRecordPet.value = String(petId); return; }
@@ -1415,9 +1509,10 @@
   });
 
   dom.search.addEventListener('input', () => { state.query = dom.search.value.trim(); dom.searchClear.classList.toggle('hidden', !state.query); clearTimeout(dom.search.timer); dom.search.timer = setTimeout(() => loadDishes().catch(error => toast(error.message, 'error')), 250); });
-  dom.noteDate.addEventListener('change', () => { loadSharedNotes().catch(error => toast(error.message, 'error')); saveNoteDraft(); });
+  dom.noteDate.addEventListener('change', () => { state.noteCalendarMonth = (dom.noteDate.value || today()).slice(0, 7); loadSharedNotes().catch(error => toast(error.message, 'error')); loadNotesOverview().catch(() => {}); saveNoteDraft(); });
   dom.noteAuthor.addEventListener('change', () => { renderNoteForm(); saveNoteDraft(); });
   dom.noteContent.addEventListener('input', () => { updateNoteCount(); saveNoteDraft(); });
+  dom.notePriority.addEventListener('change', saveNoteDraft);
   dom.noteIsTask.addEventListener('change', () => { dom.noteDueDate.disabled = !dom.noteIsTask.checked; if (!dom.noteIsTask.checked) dom.noteDueDate.value = ''; saveNoteDraft(); });
   dom.mentionPicker.addEventListener('change', saveNoteDraft);
   dom.petRecordNote.addEventListener('input', updatePetRecordCount);

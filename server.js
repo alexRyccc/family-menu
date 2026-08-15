@@ -120,6 +120,7 @@ db.exec(`
     mention_user_ids TEXT NOT NULL DEFAULT '[]',
     pinned INTEGER NOT NULL DEFAULT 0,
     is_task INTEGER NOT NULL DEFAULT 0,
+    priority TEXT NOT NULL DEFAULT 'normal',
     due_date TEXT NOT NULL DEFAULT '',
     task_done INTEGER NOT NULL DEFAULT 0,
     completed_by INTEGER,
@@ -263,9 +264,10 @@ if (!db.prepare('PRAGMA table_info(selections)').all().some(column => column.nam
 if (!db.prepare('PRAGMA table_info(shared_notes)').all().some(column => column.name === 'pinned')) {
   db.exec("ALTER TABLE shared_notes ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0");
 }
-for (const [column, definition] of [['is_task', "INTEGER NOT NULL DEFAULT 0"], ['due_date', "TEXT NOT NULL DEFAULT ''"], ['task_done', "INTEGER NOT NULL DEFAULT 0"], ['completed_by', 'INTEGER'], ['completed_at', 'TEXT']]) {
+for (const [column, definition] of [['is_task', "INTEGER NOT NULL DEFAULT 0"], ['priority', "TEXT NOT NULL DEFAULT 'normal'"], ['due_date', "TEXT NOT NULL DEFAULT ''"], ['task_done', "INTEGER NOT NULL DEFAULT 0"], ['completed_by', 'INTEGER'], ['completed_at', 'TEXT']]) {
   if (!db.prepare('PRAGMA table_info(shared_notes)').all().some(item => item.name === column)) db.exec(`ALTER TABLE shared_notes ADD COLUMN ${column} ${definition}`);
 }
+db.exec('CREATE INDEX IF NOT EXISTS idx_shared_notes_agenda ON shared_notes(task_done, due_date, priority, note_date DESC)');
 if (!db.prepare('PRAGMA table_info(pets)').all().some(column => column.name === 'gender')) {
   db.exec("ALTER TABLE pets ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
 }
@@ -584,6 +586,38 @@ app.get('/api/shared-notes/summary', (req, res) => {
   res.json({ start_date: startDate, end_date: endDate, days, ...summary, authors });
 });
 
+app.get('/api/shared-notes/calendar', (req, res) => {
+  const month = typeof req.query.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(req.query.month)
+    ? req.query.month
+    : todayStr().slice(0, 7);
+  const days = db.prepare(
+    `SELECT note_date AS date, COUNT(*) AS total,
+            SUM(CASE WHEN is_task = 1 THEN 1 ELSE 0 END) AS tasks,
+            SUM(CASE WHEN is_task = 1 AND task_done = 0 THEN 1 ELSE 0 END) AS open_tasks,
+            SUM(CASE WHEN priority = 'high' THEN 1 ELSE 0 END) AS high_priority,
+            SUM(CASE WHEN priority = 'urgent' THEN 1 ELSE 0 END) AS urgent_priority
+     FROM shared_notes
+     WHERE note_date >= ? AND note_date < date(?, '+1 month')
+     GROUP BY note_date ORDER BY note_date`
+  ).all(`${month}-01`, `${month}-01`);
+  res.json({ month, days });
+});
+
+app.get('/api/shared-notes/agenda', (req, res) => {
+  const from = isDate(req.query.from) ? req.query.from : todayStr();
+  const days = Math.min(90, Math.max(7, Number(req.query.days) || 21));
+  const end = addDays(from, days);
+  const rows = db.prepare(
+    `SELECT n.*, u.name AS author_name, u.avatar AS author_avatar, u.color AS author_color
+     FROM shared_notes n JOIN users u ON u.id = n.author_id
+     WHERE n.is_task = 1 AND n.task_done = 0
+       AND (n.due_date = '' OR n.due_date <= ?)
+     ORDER BY CASE n.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
+              CASE WHEN n.due_date = '' THEN 1 ELSE 0 END, n.due_date, n.id DESC LIMIT 60`
+  ).all(end);
+  res.json({ from, end, notes: rows.map(serializeSharedNote) });
+});
+
 app.post('/api/shared-notes', (req, res) => {
   const authorId = positiveInt(req.body.author_id);
   const noteDate = req.body.note_date;
@@ -592,14 +626,15 @@ app.post('/api/shared-notes', (req, res) => {
     ? [...new Set(req.body.mention_user_ids.map(positiveInt).filter(Boolean))].slice(0, 12)
     : [];
   const isTask = Boolean(req.body.is_task);
+  const priority = ['low', 'normal', 'high', 'urgent'].includes(req.body.priority) ? req.body.priority : 'normal';
   const dueDate = isTask && isDate(req.body.due_date) ? req.body.due_date : '';
   if (!authorId || !isDate(noteDate) || !content) return res.status(400).json({ error: '请填写日期、记录人和内容' });
   const author = db.prepare('SELECT id, name, avatar, color FROM users WHERE id = ?').get(authorId);
   if (!author) return res.status(404).json({ error: '记录人不存在' });
   const validMentionIds = mentionIds.filter(id => id !== authorId && db.prepare('SELECT 1 FROM users WHERE id = ?').get(id));
   const info = db.prepare(
-    'INSERT INTO shared_notes (note_date, content, author_id, mention_user_ids, is_task, due_date) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(noteDate, content, authorId, JSON.stringify(validMentionIds), isTask ? 1 : 0, dueDate);
+    'INSERT INTO shared_notes (note_date, content, author_id, mention_user_ids, is_task, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(noteDate, content, authorId, JSON.stringify(validMentionIds), isTask ? 1 : 0, priority, dueDate);
   const row = db.prepare(
     `SELECT n.*, u.name AS author_name, u.avatar AS author_avatar, u.color AS author_color
      FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.id = ?`
@@ -907,7 +942,7 @@ app.get('/api/home-dashboard', (req, res) => {
   const userId = positiveInt(req.query.user_id);
   const petEnd = addDays(today, 14);
   const mealCounts = db.prepare(`SELECT meal, COUNT(*) AS count FROM selections WHERE date = ? GROUP BY meal`).all(today);
-  const tasks = db.prepare(`SELECT n.id, n.content, n.due_date, n.note_date, u.name AS author_name FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.is_task = 1 AND n.task_done = 0 ORDER BY CASE WHEN n.due_date = '' THEN 1 ELSE 0 END, n.due_date, n.id DESC LIMIT 6`).all();
+  const tasks = db.prepare(`SELECT n.id, n.content, n.due_date, n.note_date, n.priority, u.name AS author_name FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.is_task = 1 AND n.task_done = 0 ORDER BY CASE n.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, CASE WHEN n.due_date = '' THEN 1 ELSE 0 END, n.due_date, n.id DESC LIMIT 6`).all();
   const mentionCandidates = userId
     ? db.prepare(`SELECT n.id, n.content, n.note_date, n.mention_user_ids, u.name AS author_name FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.mention_user_ids <> '[]' ORDER BY n.id DESC LIMIT 80`).all()
     : [];

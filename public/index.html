@@ -219,6 +219,19 @@
         </div>
       </header>
 
+      <section class="notes-overview" aria-label="记事日历与近期待办">
+        <div class="notes-calendar-panel">
+          <div class="notes-calendar-heading"><div><p class="notes-kicker">CALENDAR</p><h2 id="notesCalendarTitle">记录日历</h2></div><div class="notes-date-actions" aria-label="切换记录月份"><button id="btnNotesMonthPrev" type="button" aria-label="查看上一个月">‹</button><button id="btnNotesMonthToday" type="button">本月</button><button id="btnNotesMonthNext" type="button" aria-label="查看下一个月">›</button></div></div>
+          <div class="notes-calendar-week" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+          <div id="notesCalendar" class="notes-calendar" aria-live="polite"></div>
+          <p class="notes-calendar-legend"><span class="note-dot note-dot-record"></span>有记录 <span class="note-dot note-dot-task"></span>待办 <span class="note-dot note-dot-urgent"></span>紧急</p>
+        </div>
+        <aside class="notes-agenda-panel" aria-labelledby="notesAgendaTitle">
+          <div><p class="notes-kicker">NEXT 21 DAYS</p><h2 id="notesAgendaTitle">近期待办</h2></div>
+          <div id="notesAgenda" class="notes-agenda-list" aria-live="polite"></div>
+        </aside>
+      </section>
+
       <section class="notes-timeline" aria-labelledby="notesTimelineTitle">
         <div class="notes-timeline-heading">
           <div><p class="notes-kicker">TODAY</p><h2 id="notesTimelineTitle">当天记录</h2></div>
@@ -228,9 +241,12 @@
             <button id="btnNotesNext" type="button" aria-label="查看后一天">›</button>
           </div>
         </div>
-        <label class="notes-filter" for="noteFilter"><span>筛选当日记录</span><input id="noteFilter" type="search" placeholder="搜索内容或记录人" autocomplete="off"></label>
+        <label class="notes-filter" for="noteFilter"><span>搜索当前日期</span><input id="noteFilter" type="search" placeholder="搜索内容或记录人" autocomplete="off"></label>
         <div class="notes-tools" aria-label="记事本工具">
           <button id="btnNotesPinned" type="button" aria-pressed="false">只看固定</button>
+          <button type="button" data-note-view-filter="all" aria-pressed="true">全部</button>
+          <button type="button" data-note-view-filter="open" aria-pressed="false">未完成</button>
+          <button type="button" data-note-view-filter="high" aria-pressed="false">高优先级</button>
           <span id="notesWeekSummary" aria-live="polite"></span>
         </div>
         <p id="notesDateLabel" class="notes-date-label" aria-live="polite"></p>
@@ -311,7 +327,7 @@
         <label>日期<input id="noteDate" type="date" required></label>
         <label>记录人<select id="noteAuthor" required aria-label="记录人"></select></label>
       </div>
-      <div class="note-task-row"><label><input id="noteIsTask" type="checkbox"> 作为待办事项</label><label>截止日期<input id="noteDueDate" type="date" disabled></label></div>
+      <div class="note-task-row"><label><input id="noteIsTask" type="checkbox"> 作为待办事项</label><label>截止日期<input id="noteDueDate" type="date" disabled></label><label>重要程度<select id="notePriority"><option value="low">低</option><option value="normal" selected>普通</option><option value="high">高</option><option value="urgent">紧急</option></select></label></div>
       <label class="note-content-label" for="noteContent">内容</label>
       <div class="note-tag-row" aria-label="快捷标签"><button type="button" data-note-tag="提醒">提醒</button><button type="button" data-note-tag="采购">采购</button><button type="button" data-note-tag="外出">外出</button><button type="button" data-note-tag="重要">重要</button></div>
       <textarea id="noteContent" rows="4" maxlength="1000" placeholder="例如：周六下午要买猫砂，晚饭前记得拿快递。"></textarea>
