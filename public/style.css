@@ -2285,3 +2285,27 @@ button.family-poll-option:active { transform: translateY(1px); }
 @media (max-width: 700px) { .module-launcher { display: flex; gap: 7px; margin-right: -16px; overflow-x: auto; padding-right: 16px; border-right: 0; border-left: 0; border-radius: 0; scrollbar-width: none; }.module-launcher::-webkit-scrollbar { display: none; }.module-launcher button { flex: 0 0 104px; min-height: 58px; }.menu-launcher { margin-right: 0; padding-right: 10px; border: 1px solid #ead8b4; border-radius: 8px; }.menu-launcher button { flex-basis: 102px; } }
 @media (prefers-reduced-motion: no-preference) { .module-launcher { animation: fadeSlide 220ms ease both; }.module-launcher button { animation: quick-action-in 260ms ease both; }.module-launcher button:nth-child(2) { animation-delay: 30ms; }.module-launcher button:nth-child(3) { animation-delay: 60ms; }.module-launcher button:nth-child(4) { animation-delay: 90ms; }.module-launcher button:nth-child(5) { animation-delay: 120ms; } @keyframes quick-action-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } } }
 @media (prefers-reduced-motion: reduce) { .module-launcher button { transition: none; animation: none; } }
+
+/* ---------- Context lenses: five calm, actionable signals per module ---------- */
+.module-lens { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 14px 0 4px; border-top: 1px solid #ead8b4; border-bottom: 1px solid #ead8b4; background: rgba(255, 253, 248, .66); }
+.menu-lens { margin-top: 0; }
+.module-lens button { display: grid; min-width: 0; min-height: 74px; align-content: center; gap: 2px; padding: 10px 11px; border: 0; border-right: 1px solid #ead8b4; background: transparent; color: #76542c; font: inherit; text-align: left; transition: background 180ms ease, color 180ms ease, transform 180ms ease; }
+.module-lens button:last-child { border-right: 0; }
+.module-lens button:hover { background: #fff3df; color: #9c513b; }
+.module-lens button:active { transform: translateY(1px); }
+.module-lens button:focus-visible { position: relative; z-index: 1; outline: 3px solid rgba(201, 95, 69, .25); outline-offset: -3px; }
+.module-lens b { overflow: hidden; color: #473018; font-size: 18px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.module-lens span { overflow: hidden; color: #775632; font-size: 12px; font-weight: 760; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.module-lens small { overflow: hidden; color: #a0845c; font-size: 10px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.notes-view .module-lens button:nth-child(2) b, .pets-view .module-lens button:nth-child(2) b { color: #a8503b; }
+.recommendations-view .module-lens button:nth-child(4) b { color: #a26b1e; }
+.polls-view .module-lens button:first-child b { color: #4d8056; }
+[data-theme="dark"] .module-lens { border-color: #5b4d35; background: rgba(45, 41, 31, .72); }
+[data-theme="dark"] .module-lens button { border-color: #5b4d35; color: #dfc9a6; }
+[data-theme="dark"] .module-lens button:hover { background: #393225; color: #f5dfbc; }
+[data-theme="dark"] .module-lens b { color: #f5ead7; }
+[data-theme="dark"] .module-lens span { color: #d5bf98; }
+[data-theme="dark"] .module-lens small { color: #a99370; }
+@media (max-width: 700px) { .module-lens { display: flex; margin-right: -16px; overflow-x: auto; padding-right: 16px; border-right: 0; border-left: 0; scrollbar-width: none; }.module-lens::-webkit-scrollbar { display: none; }.module-lens button { flex: 0 0 108px; min-height: 69px; }.menu-lens { margin-right: 0; padding-right: 0; border-right: 1px solid #ead8b4; border-left: 1px solid #ead8b4; border-radius: 8px; }.menu-lens button { flex-basis: 105px; } }
+@media (prefers-reduced-motion: no-preference) { .module-lens { animation: lens-enter 240ms ease both; }.module-lens button { animation: lens-item-in 260ms ease both; }.module-lens button:nth-child(2) { animation-delay: 25ms; }.module-lens button:nth-child(3) { animation-delay: 50ms; }.module-lens button:nth-child(4) { animation-delay: 75ms; }.module-lens button:nth-child(5) { animation-delay: 100ms; } @keyframes lens-enter { from { opacity: 0; } to { opacity: 1; } } @keyframes lens-item-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } }
+@media (prefers-reduced-motion: reduce) { .module-lens, .module-lens button { animation: none; transition: none; } }

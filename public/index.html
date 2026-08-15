@@ -127,6 +127,7 @@
         <p>点一道菜告诉家人</p>
       </div>
       <section id="menuStatusPanel" class="menu-status-panel" aria-live="polite"></section>
+      <section id="menuLens" class="module-lens menu-lens" aria-label="点菜状态速览"></section>
       <div id="preferenceBar" class="preference-bar" aria-label="当前口味偏好"></div>
       <div class="filter-row">
         <div id="catChips" class="cat-chips"></div>
@@ -233,6 +234,7 @@
         <button type="button" data-note-quick="priority"><i aria-hidden="true">!</i><span>高优先级</span></button>
         <button type="button" data-note-quick="agenda"><i aria-hidden="true">→</i><span>近期待办</span></button>
       </nav>
+      <section id="notesLens" class="module-lens" aria-label="记事本状态速览"></section>
 
       <section class="notes-overview" aria-label="记事日历与近期待办">
         <div class="notes-calendar-panel">
@@ -290,6 +292,7 @@
         <button type="button" data-pet-quick="bath"><i aria-hidden="true">≈</i><span>洗澡护理</span></button>
         <button type="button" data-pet-quick="weight"><i aria-hidden="true">⌁</i><span>体重记录</span></button>
       </nav>
+      <section id="petsLens" class="module-lens" aria-label="猫咪护理状态速览"></section>
       <section aria-labelledby="petOverviewTitle">
         <div class="pets-section-heading"><div><p class="notes-kicker">OVERVIEW</p><h2 id="petOverviewTitle">最近照护</h2></div><span id="petAttentionCount">点击登记，留存一条新记录</span></div>
         <div class="pet-filter" aria-label="筛选猫咪护理状态"><button type="button" data-pet-filter="all" aria-pressed="true">全部</button><button type="button" data-pet-filter="attention" aria-pressed="false">需关注</button><button type="button" data-pet-filter="due-soon" aria-pressed="false">近期安排</button></div>
@@ -323,6 +326,7 @@
         <button type="button" data-recommendation-quick="travel"><i aria-hidden="true">⌖</i><span>旅行足迹</span></button>
         <button type="button" data-recommendation-quick="checkin"><i aria-hidden="true">＋</i><span>立即打卡</span></button>
       </nav>
+      <section id="recommendationsLens" class="module-lens" aria-label="推荐清单状态速览"></section>
 
       <section class="recommendation-map-section" aria-labelledby="recommendationMapTitle">
         <div class="recommendations-section-heading"><div><p class="notes-kicker">MAP</p><h2 id="recommendationMapTitle">免费地图定位</h2></div><button id="btnOpenCheckin" class="map-checkin-button" type="button">打卡</button></div>
@@ -371,6 +375,7 @@
         <button type="button" data-poll-template="shopping"><i aria-hidden="true">⌑</i><span>采购决定</span></button>
         <button type="button" data-poll-template="date"><i aria-hidden="true">◷</i><span>确定日期</span></button>
       </nav>
+      <section id="pollsLens" class="module-lens" aria-label="家庭投票状态速览"></section>
       <div id="pollsList" class="polls-list" aria-live="polite"></div>
     </div>
   </section>

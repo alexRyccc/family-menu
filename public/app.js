@@ -21,7 +21,8 @@
     notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'), notesWeekSummary: $('#notesWeekSummary'), noteIsTask: $('#noteIsTask'), noteDueDate: $('#noteDueDate'), notePriority: $('#notePriority'), notesCalendar: $('#notesCalendar'), notesAgenda: $('#notesAgenda'), notesCalendarTitle: $('#notesCalendarTitle'),
     petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus'), petCareTypeFilter: $('#petCareTypeFilter'), petDetailContent: $('#petDetailContent'), petRecordClinic: $('#petRecordClinic'), petRecordMedication: $('#petRecordMedication'), petRecordWeight: $('#petRecordWeight'), petRecordInterval: $('#petRecordInterval'), petRecordAttachment: $('#petRecordAttachment'),
     recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), recommendationTimeline: $('#recommendationTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary'),
-    pollsView: $('#pollsView'), pollsList: $('#pollsList'), pollTitle: $('#pollTitle'), pollDescription: $('#pollDescription'), pollDeadline: $('#pollDeadline'), pollAuthor: $('#pollAuthor'), pollOptionInputs: $('#pollOptionInputs'), pollCreateStatus: $('#pollCreateStatus'), sharedPollContent: $('#sharedPollContent')
+    pollsView: $('#pollsView'), pollsList: $('#pollsList'), pollTitle: $('#pollTitle'), pollDescription: $('#pollDescription'), pollDeadline: $('#pollDeadline'), pollAuthor: $('#pollAuthor'), pollOptionInputs: $('#pollOptionInputs'), pollCreateStatus: $('#pollCreateStatus'), sharedPollContent: $('#sharedPollContent'),
+    menuLens: $('#menuLens'), notesLens: $('#notesLens'), petsLens: $('#petsLens'), recommendationsLens: $('#recommendationsLens'), pollsLens: $('#pollsLens')
   };
   const avatars = ['🐱', '🐸', '🐷', '🐻', '🐼', '🦊', '🐰', '🐯', '🐶', '🐨'];
   const colors = ['#ef6c5b', '#2878b5', '#159570', '#c45488', '#ba7a2b', '#7765b3'];
@@ -102,6 +103,77 @@
   function renderTableNote() {
     const notes = ['今天的餐桌，从一道想吃的菜开始。', '有人一起想吃，就是一顿饭最好的调味。', '不用想得太久，选一道合心意的就好。', '今晚吃什么，让家人一起决定。', '冰箱里的食材，也值得一顿好好安排。', '去尝一道没吃过的，今天就会有新惊喜。', '一起吃饭的时候，世界会慢一点。'];
     dom.tableNote.textContent = notes[new Date().getDay()];
+  }
+
+  function renderLens(container, items) {
+    if (!container) return;
+    container.innerHTML = items.map(item => `<button type="button" data-lens-action="${item.action}"><b>${esc(item.value)}</b><span>${esc(item.label)}</span><small>${esc(item.detail)}</small></button>`).join('');
+  }
+
+  function renderMenuLens() {
+    const selected = state.plan.filter(item => item.meal === state.meal).length;
+    const remaining = Math.max(0, state.users.length - selected);
+    renderLens(dom.menuLens, [
+      { action: 'menu-date', value: dateLabel(state.date), label: mealName(state.meal), detail: '切回今天' },
+      { action: 'menu-progress', value: `${selected}/${state.users.length || 0}`, label: '本餐已选', detail: remaining ? `还有 ${remaining} 人` : '全员完成' },
+      { action: 'menu-preferences', value: state.preferences.length || '0', label: '口味偏好', detail: state.preferences.length ? '已用于筛菜' : '还未设置' },
+      { action: 'menu-fresh', value: state.avoidRecent ? '开' : '关', label: '本周不重样', detail: state.avoidRecent ? '已排除近期' : '点击开启' },
+      { action: 'menu-reset', value: state.dishes.length || '—', label: '当前菜品', detail: '清空筛选' }
+    ]);
+  }
+
+  function renderNotesLens() {
+    const open = state.notes.filter(note => note.is_task && !note.task_done).length;
+    const high = state.notes.filter(note => ['high', 'urgent'].includes(note.priority)).length;
+    const pinned = state.notes.filter(note => note.pinned).length;
+    const agenda = state.noteAgenda.filter(note => !note.task_done).length;
+    renderLens(dom.notesLens, [
+      { action: 'notes-today', value: state.notes.length, label: '当天记录', detail: '回到今天' },
+      { action: 'notes-open', value: open, label: '未完成', detail: open ? '点击筛选' : '全部完成' },
+      { action: 'notes-high', value: high, label: '高优先级', detail: high ? '需要留意' : '暂无紧急' },
+      { action: 'notes-pinned', value: pinned, label: '已固定', detail: pinned ? '点击查看' : '暂无固定' },
+      { action: 'notes-agenda', value: agenda, label: '近期待办', detail: '查看 21 天' }
+    ]);
+  }
+
+  function renderPetsLens() {
+    const attention = state.pets.filter(pet => ['vaccine', 'internal_deworming', 'external_deworming', 'bath'].some(type => careState(type, pet.latest?.[type]).tone !== 'done')).length;
+    const dueSoon = state.petTasks.filter(task => !task.done).length;
+    const weightRecords = state.petRecords.filter(record => Number(record.weight_kg) > 0).length;
+    renderLens(dom.petsLens, [
+      { action: 'pets-all', value: state.pets.length, label: '猫咪档案', detail: '查看全部' },
+      { action: 'pets-attention', value: attention, label: '需要关注', detail: attention ? '补齐护理记录' : '状态不错' },
+      { action: 'pets-due', value: dueSoon, label: '护理待办', detail: dueSoon ? '近期要安排' : '暂无到期' },
+      { action: 'pets-weight', value: weightRecords, label: '体重记录', detail: '登记一次体重' },
+      { action: 'pets-history', value: state.petRecords.length, label: '永久记录', detail: '查看时间线' }
+    ]);
+  }
+
+  function renderRecommendationsLens() {
+    const want = state.savedRecommendations.filter(item => item.visit_status === 'want').length;
+    const visited = state.savedRecommendations.filter(item => item.visit_status === 'visited').length;
+    const rated = state.savedRecommendations.filter(item => Number(item.rating) >= 5).length;
+    const travel = state.savedRecommendations.filter(item => item.travel_key).length;
+    renderLens(dom.recommendationsLens, [
+      { action: 'recommendations-all', value: state.savedRecommendations.length, label: '全部收藏', detail: '清除快捷筛选' },
+      { action: 'recommendations-want', value: want, label: '想去想买', detail: '待安排清单' },
+      { action: 'recommendations-visited', value: visited, label: '去过回购', detail: '真实体验' },
+      { action: 'recommendations-rating', value: rated, label: '五星精选', detail: '优先再去' },
+      { action: 'recommendations-travel', value: travel, label: '旅行足迹', detail: '按年份浏览' }
+    ]);
+  }
+
+  function renderPollsLens() {
+    const open = state.familyPolls.filter(poll => pollState(poll).className === 'open');
+    const totalVotes = state.familyPolls.reduce((sum, poll) => sum + Number(poll.total_votes || 0), 0);
+    const withDeadline = open.filter(poll => poll.deadline).length;
+    renderLens(dom.pollsLens, [
+      { action: 'polls-open', value: open.length, label: '进行中', detail: '打开投票' },
+      { action: 'polls-votes', value: totalVotes, label: '累计投票', detail: '实时汇总' },
+      { action: 'polls-deadline', value: withDeadline, label: '设有截止', detail: '按期决定' },
+      { action: 'polls-template', value: '5', label: '快速模板', detail: '一键预填' },
+      { action: 'polls-create', value: '+', label: '新建投票', detail: '自定义问题' }
+    ]);
   }
 
   function setConnection(status) {
@@ -331,6 +403,7 @@
     const notes = state.noteAgenda;
     if (!notes.length) {
       dom.notesAgenda.innerHTML = '<p class="notes-agenda-empty">未来 21 天没有未完成待办，轻松一些也挺好。</p>';
+      renderNotesLens();
       return;
     }
     dom.notesAgenda.innerHTML = notes.map(note => {
@@ -338,6 +411,7 @@
       const date = note.due_date || note.note_date;
       return `<button type="button" class="notes-agenda-item ${overdue ? 'is-overdue' : ''}" data-note-date="${esc(note.note_date)}"><span class="notes-agenda-date">${overdue ? '已逾期' : note.due_date ? date.slice(5) : '无截止'}</span><div><strong>${esc(note.content)}</strong><small>${note.author_avatar || ''} ${esc(note.author_name)} · ${note.due_date ? `截止 ${note.due_date}` : `记录于 ${note.note_date}`}</small></div>${notePriorityBadge(note.priority)}</button>`;
     }).join('');
+    renderNotesLens();
   }
 
   async function loadNotesOverview() {
@@ -374,6 +448,7 @@
     $('#notesTimelineTitle').textContent = date === today() ? '今天的记录' : '当天记录';
     if (!visibleNotes.length) {
       dom.notesList.innerHTML = `<div class="notes-empty"><strong>${keyword ? '没有匹配的记录' : '这一天还没有记录'}</strong><span>${keyword ? '换个关键词试试。' : '先写下一件想让家人知道的小事。'}</span></div>`;
+      renderNotesLens();
       return;
     }
     dom.notesList.innerHTML = visibleNotes.map(note => {
@@ -387,6 +462,7 @@
       const remove = canDelete ? `<button class="note-delete" type="button" data-delete-note="${note.id}" title="删除这条记录" aria-label="删除 ${esc(note.author_name)} 的这条记录">×</button>` : '';
       return `<article class="note-entry ${note.task_done ? 'note-task-done' : ''} ${note.pinned ? 'note-pinned' : ''} ${note.id === state.justAddedNoteId ? 'note-just-added' : ''}"><div class="note-author"><span style="background:${esc(note.author_color)}">${esc(note.author_avatar)}</span><strong>${esc(note.author_name)}</strong>${notePriorityBadge(note.priority)}${note.pinned ? '<em>固定</em>' : ''}<time>${esc(String(note.created_at || '').slice(11, 16))}</time><button class="note-copy" type="button" data-copy-note="${note.id}" title="复制这条记录" aria-label="复制 ${esc(note.author_name)} 的这条记录">⧉</button>${pin}${task}${remove}</div><p>${content}</p>${due}${mentions}${readState}</article>`;
     }).join('');
+    renderNotesLens();
   }
 
   function renderNoteSummary() {
@@ -408,6 +484,7 @@
       state.noteSummary = summary;
       renderSharedNotes();
       renderNoteSummary();
+      renderNotesLens();
       if (state.noteCalendarMonth === date.slice(0, 7)) loadNotesOverview().catch(() => {});
       const unreadMentionIds = state.me ? state.notes.filter(note => note.mentions?.some(user => user.id === state.me.id) && !note.read_user_ids?.includes(state.me.id)).map(note => note.id) : [];
       if (unreadMentionIds.length) api('/api/shared-notes/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id, note_ids: unreadMentionIds }) }).then(() => loadSharedNotes()).catch(() => {});
@@ -611,6 +688,7 @@
     state.pets = await api('/api/pets');
     renderPets();
     renderPetCareFilter();
+    renderPetsLens();
   }
 
   async function loadPetRecords() {
@@ -621,6 +699,7 @@
       state.petTasks = tasks;
       state.petTemplates = templates;
       renderPetRecords();
+      renderPetsLens();
     } finally {
       dom.petRecords.removeAttribute('aria-busy');
     }
@@ -808,6 +887,7 @@
     renderRecommendations();
     renderCheckins();
     renderRecommendationTimeline();
+    renderRecommendationsLens();
   }
 
   function pollVoterKey() {
@@ -848,6 +928,7 @@
       const deadline = poll.deadline ? `截止 ${poll.deadline}` : '未设置截止日期';
       return `<article class="family-poll-card"><div class="family-poll-card-top"><span class="family-poll-status ${status.className}">${status.label}</span><small>${esc(deadline)} · ${Number(poll.total_votes)} 人已投</small></div><h2>${esc(poll.title)}</h2>${poll.description ? `<p>${esc(poll.description)}</p>` : ''}<div class="family-poll-options">${poll.options.map(option => pollOptionMarkup(option, Number(poll.total_votes), false)).join('')}</div><footer><small>${poll.author ? `${esc(poll.author.avatar || '')} ${esc(poll.author.name)} 发起` : '家庭成员发起'}</small><div><button type="button" data-open-family-poll="${esc(poll.share_code)}">查看 / 投票</button><button type="button" data-share-family-poll="${esc(poll.share_code)}">分享链接</button>${owner && status.className === 'open' ? `<button type="button" data-close-family-poll="${poll.id}">结束</button>` : ''}</div></footer></article>`;
     }).join('') || '<div class="notes-empty"><strong>还没有家庭投票</strong><span>从下一次晚餐、出行或采购决定开始吧。</span></div>';
+    renderPollsLens();
   }
 
   async function loadFamilyPolls() {
@@ -917,6 +998,31 @@
     state.recommendationTravelOnly = action === 'travel';
     renderRecommendations();
     $('#recommendationsListTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function runLensAction(action) {
+    if (action === 'menu-date') { state.date = today(); return changeMealDate(0); }
+    if (action === 'menu-progress') return $('#feedSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (action === 'menu-preferences') return openPreferences();
+    if (action === 'menu-fresh') { state.avoidRecent = !state.avoidRecent; $('#btnAvoidRepeat')?.classList.toggle('active', state.avoidRecent); $('#btnAvoidRepeat')?.setAttribute('aria-pressed', String(state.avoidRecent)); renderDishes(); return renderMenuLens(); }
+    if (action === 'menu-reset') { state.category = '全部'; state.query = ''; state.onlyFavorites = false; state.avoidRecent = false; dom.search.value = ''; dom.searchClear.classList.add('hidden'); renderCategories(); await loadDishes(); return renderMenuLens(); }
+    if (action === 'notes-today') { selectNotesDate(today()); state.noteViewFilter = 'all'; return; }
+    if (action === 'notes-open' || action === 'notes-high') { state.noteViewFilter = action === 'notes-open' ? 'open' : 'high'; $$('.notes-tools [data-note-view-filter]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.noteViewFilter === state.noteViewFilter))); return renderSharedNotes(); }
+    if (action === 'notes-pinned') { state.notePinnedOnly = !state.notePinnedOnly; $('#btnNotesPinned')?.setAttribute('aria-pressed', String(state.notePinnedOnly)); return renderSharedNotes(); }
+    if (action === 'notes-agenda') return $('#notesAgendaTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (action === 'pets-all' || action === 'pets-attention' || action === 'pets-due') { state.petFilter = action === 'pets-all' ? 'all' : action === 'pets-attention' ? 'attention' : 'due-soon'; $$('.pet-filter button').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.petFilter === state.petFilter))); renderPets(); return $('#petOverviewTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    if (action === 'pets-weight') return openPetQuick('weight');
+    if (action === 'pets-history') return $('#petHistoryTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (action === 'recommendations-all') { state.recommendationFilter = 'all'; state.recommendationVisit = 'all'; state.recommendationRatingFilter = 0; state.recommendationTravelOnly = false; return renderRecommendations(); }
+    if (action === 'recommendations-want') return runRecommendationQuick('want');
+    if (action === 'recommendations-visited') return runRecommendationQuick('visited');
+    if (action === 'recommendations-rating') return runRecommendationQuick('rating');
+    if (action === 'recommendations-travel') return runRecommendationQuick('travel');
+    if (action === 'polls-open') { const poll = state.familyPolls.find(item => pollState(item).className === 'open'); return poll ? openSharedPoll(poll.share_code) : openPollComposer('dinner'); }
+    if (action === 'polls-votes') return dom.pollsList?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (action === 'polls-deadline') return dom.pollsList?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (action === 'polls-template') return $('.poll-templates')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (action === 'polls-create') return openPollComposer();
   }
 
   function addPollOptionInput(value = '') {
@@ -1123,7 +1229,7 @@
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (step === 2 || step === 3) $('#mealDate').textContent = `${dateLabel(state.date)} · ${mealName(state.meal)}`;
-    if (step === 3) renderMenuStatusPanel();
+    if (step === 3) { renderMenuStatusPanel(); renderMenuLens(); }
   }
 
   function openModal(id) {
@@ -1628,6 +1734,7 @@
       if (button.dataset.petQuick) return openPetQuick(button.dataset.petQuick);
       if (button.dataset.recommendationQuick) return runRecommendationQuick(button.dataset.recommendationQuick);
       if (button.dataset.pollTemplate) return openPollComposer(button.dataset.pollTemplate);
+      if (button.dataset.lensAction) return runLensAction(button.dataset.lensAction);
       if (button.id === 'btnRefreshHome') return loadHomeData();
       if (button.id === 'btnOpenPreferences') return openPreferences();
       if (button.id === 'btnSavePreferences') return savePreferences();
