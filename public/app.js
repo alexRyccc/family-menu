@@ -9,6 +9,9 @@
   const today = () => localDate();
   const dateLabel = date => new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(`${date}T00:00:00`));
   const mealName = meal => meal === 'lunch' ? '中饭' : '晚饭';
+  const initialParams = new URLSearchParams(window.location.search);
+  const validViews = new Set(['home', 'menu', 'notes', 'pets', 'recommendations', 'polls']);
+  const routeDate = /^\d{4}-\d{2}-\d{2}$/.test(initialParams.get('date') || '') ? initialParams.get('date') : today();
   const dom = {
     toast: $('#toast'), whoGrid: $('#whoGrid'), switchGrid: $('#switchGrid'), dishGrid: $('#dishGrid'),
     skeleton: $('#skeletonGrid'), dishEmpty: $('#dishEmpty'), dishError: $('#dishError'), whoError: $('#whoError'),
@@ -37,10 +40,11 @@
   ];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], superRecommendations: [], superRecommendationFilter: 'all', checkins: [], familyTimeline: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', recommendationVisit: 'all', recommendationRatingFilter: 0, recommendationTravelOnly: false, mapRecommendationId: null, preferences: [], homeDashboard: null, familyPolls: [], sharedPoll: null
+    meal: ['lunch', 'dinner'].includes(initialParams.get('meal')) ? initialParams.get('meal') : localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: routeDate, category: initialParams.get('category') || '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: validViews.has(initialParams.get('view')) ? initialParams.get('view') : 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: initialParams.get('month') || today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], recommendationExpanded: false, superRecommendations: [], superRecommendationFilter: 'all', superRecommendationExpanded: false, checkins: [], familyTimeline: [], recommendationFilter: initialParams.get('kind') || 'all', recommendationRegion: initialParams.get('region') || 'all', recommendationYear: initialParams.get('year') || 'all', recommendationVisit: 'all', recommendationRatingFilter: 0, recommendationTravelOnly: false, mapRecommendationId: null, preferences: [], homeDashboard: null, familyPolls: [], sharedPoll: null
   };
   let toastTimer;
   let lastFocus = null;
+  const motionBehavior = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
   // Keep the brand and the four-step flow in one sticky header on narrow screens.
   $('#topbar').append(dom.stepBar);
@@ -191,7 +195,28 @@
     $('#btnMe').classList.remove('hidden');
   }
 
-  function setView(view) {
+  function syncUrlState(mode = 'replace') {
+    const params = new URLSearchParams();
+    const vote = new URLSearchParams(window.location.search).get('vote');
+    if (vote) params.set('vote', vote);
+    if (state.view !== 'home') params.set('view', state.view);
+    if (state.view === 'menu') {
+      params.set('date', state.date);
+      params.set('meal', state.meal);
+      if (state.category !== '全部') params.set('category', state.category);
+    }
+    if (state.view === 'notes') params.set('month', state.noteCalendarMonth);
+    if (state.view === 'recommendations') {
+      if (state.recommendationFilter !== 'all') params.set('kind', state.recommendationFilter);
+      if (state.recommendationRegion !== 'all') params.set('region', state.recommendationRegion);
+      if (state.recommendationYear !== 'all') params.set('year', state.recommendationYear);
+    }
+    const url = `${window.location.pathname}${params.size ? `?${params}` : ''}`;
+    window.history[mode === 'push' ? 'pushState' : 'replaceState']({ view: state.view }, '', url);
+  }
+
+  function setView(view, historyMode = 'push') {
+    if (!validViews.has(view)) view = 'home';
     state.view = view;
     document.body.classList.toggle('app-home', view === 'home');
     document.body.classList.toggle('app-menu', view === 'menu');
@@ -216,7 +241,8 @@
     if (view === 'pets') Promise.all([loadPets(), loadPetRecords()]).catch(error => toast(error.message, 'error'));
     if (view === 'recommendations') loadRecommendationData().catch(error => toast(error.message, 'error'));
     if (view === 'polls') loadFamilyPolls().catch(error => toast(error.message, 'error'));
-    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    if (historyMode !== 'none') syncUrlState(historyMode);
+    window.scrollTo({ top: 0, behavior: motionBehavior() });
   }
 
   function timelineIcon(kind) {
@@ -369,6 +395,7 @@
     const date = new Date(`${state.noteCalendarMonth}-01T00:00:00`);
     date.setMonth(date.getMonth() + change);
     state.noteCalendarMonth = localDate(date).slice(0, 7);
+    syncUrlState('push');
     loadNotesOverview().catch(error => toast(error.message, 'error'));
   }
 
@@ -430,6 +457,7 @@
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     dom.noteDate.value = date;
     state.noteCalendarMonth = date.slice(0, 7);
+    syncUrlState('push');
     loadSharedNotes().catch(error => toast(error.message, 'error'));
     loadNotesOverview().catch(error => toast(error.message, 'error'));
   }
@@ -502,7 +530,7 @@
     if (!content) return toast('写一点内容再发布吧', 'error');
     const button = $('#btnCreateNote');
     button.disabled = true;
-    dom.noteSaveStatus.textContent = '正在发布...';
+    dom.noteSaveStatus.textContent = '正在发布…';
     try {
       const created = await api('/api/shared-notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author_id: authorId, note_date: noteDate, content, mention_user_ids: mentionUserIds, is_task: dom.noteIsTask.checked, due_date: dom.noteDueDate.value, priority: dom.notePriority.value }) });
       state.justAddedNoteId = created.id;
@@ -629,7 +657,7 @@
 
   function petAvatar(pet, className) {
     const avatar = String(pet?.avatar || '🐱');
-    if (avatar.startsWith('/assets/pets/')) return `<img class="${className}-image" src="${esc(avatar)}" alt="${esc(pet.name)}的头像">`;
+    if (avatar.startsWith('/assets/pets/')) return `<img class="${className}-image" src="${esc(avatar)}" alt="${esc(pet.name)}的头像" width="120" height="120" loading="lazy" decoding="async">`;
     return esc(avatar);
   }
 
@@ -746,7 +774,7 @@
     if (!petId || !careType || !careDate) return toast('请完整选择猫咪、项目和日期', 'error');
     const button = $('#btnSavePetRecord');
     button.disabled = true;
-    dom.petRecordStatus.textContent = '正在保存...';
+    dom.petRecordStatus.textContent = '正在保存…';
     try {
       const interval = Number(dom.petRecordInterval.value);
       if (interval) await api('/api/pet-care-templates', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pet_id: petId, care_type: careType, interval_days: interval, clinic: dom.petRecordClinic.value, medication: dom.petRecordMedication.value }) });
@@ -814,7 +842,7 @@
   }
 
   function renderRecommendations() {
-    const visible = state.savedRecommendations.filter(item => {
+    const matching = state.savedRecommendations.filter(item => {
       const year = String(item.visited_label || item.created_at || '').slice(0, 4);
       return (state.recommendationFilter === 'all' || item.kind === state.recommendationFilter)
         && (state.recommendationRegion === 'all' || item.region === state.recommendationRegion)
@@ -823,14 +851,15 @@
         && (!state.recommendationRatingFilter || Number(item.rating) >= state.recommendationRatingFilter)
         && (!state.recommendationTravelOnly || Boolean(item.travel_key));
     });
+    const visible = state.recommendationExpanded ? matching : matching.slice(0, 6);
     const located = state.savedRecommendations.filter(hasCoordinates).length;
     const travelCities = state.savedRecommendations.filter(item => item.travel_key).length;
     const checkinCities = new Set(state.checkins.map(item => item.region).filter(Boolean)).size;
-    dom.recommendationStats.textContent = `${travelCities} 座城市 · ${located} 个已定位 · ${checkinCities} 个地区已打卡`;
+    dom.recommendationStats.textContent = `${matching.length} 条匹配 · ${travelCities} 座城市 · ${located} 个已定位 · ${checkinCities} 个地区已打卡`;
     dom.recommendationList.innerHTML = visible.map(item => {
       const type = recommendationTypes[item.kind] || recommendationTypes.place;
       const mapButton = hasCoordinates(item) ? `<button type="button" data-show-recommendation="${item.id}">地图查看</button>` : '';
-      const gallery = Array.isArray(item.images) && item.images.length ? `<button class="recommendation-gallery" type="button" data-open-gallery="${item.id}" aria-label="查看${esc(item.title)}的${item.images.length}张城市图片">${item.images.slice(0, 3).map(image => `<img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}" loading="lazy" decoding="async">`).join('')}<span class="recommendation-gallery-count">${item.images.length} 张</span></button>` : '';
+      const gallery = Array.isArray(item.images) && item.images.length ? `<button class="recommendation-gallery" type="button" data-open-gallery="${item.id}" aria-label="查看${esc(item.title)}的${item.images.length}张城市图片">${item.images.slice(0, 3).map(image => `<img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}" width="320" height="200" loading="lazy" decoding="async">`).join('')}<span class="recommendation-gallery-count">${item.images.length} 张</span></button>` : '';
       const date = item.visited_label || String(item.created_at || '').slice(0, 10);
       let tags = [];
       try { tags = Array.isArray(item.tags) ? item.tags : JSON.parse(item.tags || '[]'); } catch (_) { tags = []; }
@@ -839,6 +868,12 @@
       const status = item.visit_status === 'visited' ? '去过' : '想去';
       return `<article class="recommendation-card ${item.travel_key ? 'travel-city-card' : ''}">${gallery}<div class="recommendation-card-top"><span class="recommendation-kind recommendation-kind-${esc(item.kind)}">${type.icon} ${esc(type.label)}</span><time>${esc(date)}</time></div><h3>${esc(item.title)}</h3><p class="recommendation-location">${esc(locationText(item))}</p><div class="recommendation-meta"><span class="recommendation-status is-${esc(item.visit_status || 'want')}">${status}</span>${stars}</div>${tagsHtml}${item.description ? `<p class="recommendation-description">${esc(item.description)}</p>` : ''}${item.revisit_reason ? `<p class="recommendation-revisit">下次：${esc(item.revisit_reason)}</p>` : ''}<div class="recommendation-card-footer"><small>${item.travel_key ? `${esc(item.region)} · 城市足迹` : item.author_name ? `${esc(item.author_avatar || '')} ${esc(item.author_name)} 推荐` : '家人推荐'}${item.checkin_count ? ` · ${item.checkin_count} 次打卡` : ''}</small><div>${mapButton}${item.travel_key ? `<button type="button" data-memory-card="${item.id}">回忆卡</button>` : ''}<button type="button" data-checkin-recommendation="${item.id}">去打卡</button></div></div></article>`;
     }).join('') || '<div class="notes-empty"><strong>还没有推荐</strong><span>把一家人觉得值得的地点、商家和商品先存下来。</span></div>';
+    const toggle = $('#btnToggleRecommendations');
+    if (toggle) {
+      toggle.classList.toggle('hidden', matching.length <= 6);
+      toggle.setAttribute('aria-expanded', String(state.recommendationExpanded));
+      toggle.textContent = state.recommendationExpanded ? '收起我的推荐' : `展开全部 ${matching.length} 条推荐`;
+    }
     const target = state.savedRecommendations.find(item => item.id === state.mapRecommendationId) || state.savedRecommendations.find(hasCoordinates);
     setMapTarget(target, target?.title);
   }
@@ -849,14 +884,21 @@
 
   function renderSuperRecommendations() {
     if (!dom.superRecommendationList) return;
-    const visible = state.superRecommendations.filter(item => state.superRecommendationFilter === 'all' || item.group === state.superRecommendationFilter);
+    const matching = state.superRecommendations.filter(item => state.superRecommendationFilter === 'all' || item.group === state.superRecommendationFilter);
+    const visible = state.superRecommendationExpanded ? matching : matching.slice(0, 6);
     const savedCount = state.superRecommendations.filter(superRecommendationSaved).length;
-    dom.superRecommendationStats.textContent = `${state.superRecommendations.length} 个精选 · ${savedCount} 个已加入清单`;
+    dom.superRecommendationStats.textContent = `${matching.length} 个精选 · ${savedCount} 个已加入清单`;
     dom.superRecommendationList.setAttribute('aria-busy', 'false');
     dom.superRecommendationList.innerHTML = visible.map(item => {
       const saved = superRecommendationSaved(item);
-      return `<article class="super-recommendation-card"><div class="super-recommendation-media">${item.image_path ? `<img src="${esc(item.image_path)}" alt="${esc(item.title)}实景" loading="lazy" decoding="async">` : '<span>暂无图片</span>'}<b>${esc(item.category)}</b></div><div class="super-recommendation-copy"><div class="super-recommendation-title"><div><small>${esc(item.region)}</small><h3>${esc(item.title)}</h3></div><span>${esc(item.best_time)}</span></div><p>${esc(item.description)}</p><div class="super-recommendation-tags">${item.tags.map(tag => `<span>${esc(tag)}</span>`).join('')}</div><p class="super-recommendation-reason"><strong>猫家建议</strong>${esc(item.reason)}</p><div class="super-recommendation-actions"><button type="button" data-super-map="${esc(item.key)}">地图</button><button class="super-save" type="button" data-super-save="${esc(item.key)}" ${saved ? 'disabled' : ''}>${saved ? '已在清单' : '加入想去'}</button></div></div></article>`;
+      return `<article class="super-recommendation-card"><div class="super-recommendation-media">${item.image_path ? `<img src="${esc(item.image_path)}" alt="${esc(item.title)}实景" width="640" height="420" loading="lazy" decoding="async">` : '<span>暂无图片</span>'}<b>${esc(item.category)}</b></div><div class="super-recommendation-copy"><div class="super-recommendation-title"><div><small>${esc(item.region)}</small><h3>${esc(item.title)}</h3></div><span>${esc(item.best_time)}</span></div><p>${esc(item.description)}</p><div class="super-recommendation-tags">${item.tags.map(tag => `<span>${esc(tag)}</span>`).join('')}</div><p class="super-recommendation-reason"><strong>猫家建议</strong>${esc(item.reason)}</p><div class="super-recommendation-actions"><button type="button" data-super-map="${esc(item.key)}">地图</button><button class="super-save" type="button" data-super-save="${esc(item.key)}" ${saved ? 'disabled' : ''}>${saved ? '已在清单' : '加入想去'}</button></div></div></article>`;
     }).join('') || '<div class="notes-empty"><strong>这个分组还没有推荐</strong><span>切换另一个分组看看。</span></div>';
+    const toggle = $('#btnToggleSuperRecommendations');
+    if (toggle) {
+      toggle.classList.toggle('hidden', matching.length <= 6);
+      toggle.setAttribute('aria-expanded', String(state.superRecommendationExpanded));
+      toggle.textContent = state.superRecommendationExpanded ? '收起精选推荐' : `展开全部 ${matching.length} 个推荐`;
+    }
   }
 
   function showSuperRecommendation(key) {
@@ -870,7 +912,7 @@
     const item = state.superRecommendations.find(record => record.key === key);
     if (!item || superRecommendationSaved(item)) return;
     button.disabled = true;
-    button.textContent = '正在加入...';
+      button.textContent = '正在加入…';
     try {
       await api('/api/family-recommendations', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -896,7 +938,7 @@
     const item = state.savedRecommendations.find(record => record.id === recommendationId);
     if (!item?.images?.length) return;
     $('#galleryTitle').textContent = `${item.title}的城市图册`;
-    dom.galleryContent.innerHTML = `<p>${esc(item.description || locationText(item))}</p><div class="gallery-grid">${item.images.map(image => `<figure><img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}"><figcaption>${esc(image.caption || item.title)}</figcaption></figure>`).join('')}</div>`;
+    dom.galleryContent.innerHTML = `<p>${esc(item.description || locationText(item))}</p><div class="gallery-grid">${item.images.map(image => `<figure><img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}" width="800" height="520" loading="lazy" decoding="async"><figcaption>${esc(image.caption || item.title)}</figcaption></figure>`).join('')}</div>`;
     openModal('galleryModal');
   }
 
@@ -905,7 +947,7 @@
     if (!item) return;
     $('#galleryTitle').textContent = `${item.title} · 旅行回忆`;
     const hero = item.images?.[0];
-    dom.galleryContent.innerHTML = `<article class="memory-card">${hero ? `<img src="${esc(hero.image_path)}" alt="${esc(hero.caption || item.title)}">` : ''}<p class="memory-card-date">${esc(item.visited_label || String(item.created_at || '').slice(0, 10))}</p><h3>${esc(item.title)}</h3><p>${esc(item.description || locationText(item))}</p><small>${esc(item.region || '旅行足迹')} · 猫家的共同记忆</small></article>`;
+    dom.galleryContent.innerHTML = `<article class="memory-card">${hero ? `<img src="${esc(hero.image_path)}" alt="${esc(hero.caption || item.title)}" width="800" height="520" loading="eager" decoding="async">` : ''}<p class="memory-card-date">${esc(item.visited_label || String(item.created_at || '').slice(0, 10))}</p><h3>${esc(item.title)}</h3><p>${esc(item.description || locationText(item))}</p><small>${esc(item.region || '旅行足迹')} · 猫家的共同记忆</small></article>`;
     openModal('galleryModal');
   }
 
@@ -932,15 +974,6 @@
     renderCheckins();
     renderRecommendationTimeline();
     renderRecommendationsLens();
-  }
-
-  function pollVoterKey() {
-    let key = localStorage.getItem('fm_family_poll_voter_key');
-    if (!key) {
-      key = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      localStorage.setItem('fm_family_poll_voter_key', key);
-    }
-    return key;
   }
 
   function pollShareUrl(code) {
@@ -985,6 +1018,7 @@
     if (action === 'meal') {
       state.meal = state.meal === 'lunch' ? 'dinner' : 'lunch';
       localStorage.setItem('fm_last_meal', state.meal);
+      syncUrlState();
       setStep(3);
       await Promise.all([loadDishes(), refreshDashboard(), loadRecentSelection()]);
       return toast(`已切换到${mealName(state.meal)}`, 'info');
@@ -995,7 +1029,7 @@
   }
 
   function openNoteQuick(action) {
-    if (action === 'agenda') return $('#notesAgendaTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (action === 'agenda') return $('#notesAgendaTitle')?.scrollIntoView({ behavior: motionBehavior(), block: 'center' });
     if (action === 'priority') {
       state.noteViewFilter = 'high';
       $$('.notes-tools [data-note-view-filter]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.noteViewFilter === 'high')));
@@ -1041,31 +1075,31 @@
     state.recommendationRatingFilter = action === 'rating' ? 5 : 0;
     state.recommendationTravelOnly = action === 'travel';
     renderRecommendations();
-    $('#recommendationsListTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('#recommendationsListTitle')?.scrollIntoView({ behavior: motionBehavior(), block: 'start' });
   }
 
   async function runLensAction(action) {
     if (action === 'menu-date') { state.date = today(); return changeMealDate(0); }
-    if (action === 'menu-progress') return $('#feedSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (action === 'menu-progress') return $('#feedSection')?.scrollIntoView({ behavior: motionBehavior(), block: 'start' });
     if (action === 'menu-preferences') return openPreferences();
     if (action === 'menu-fresh') { state.avoidRecent = !state.avoidRecent; $('#btnAvoidRepeat')?.classList.toggle('active', state.avoidRecent); $('#btnAvoidRepeat')?.setAttribute('aria-pressed', String(state.avoidRecent)); renderDishes(); return renderMenuLens(); }
     if (action === 'menu-reset') { state.category = '全部'; state.query = ''; state.onlyFavorites = false; state.avoidRecent = false; dom.search.value = ''; dom.searchClear.classList.add('hidden'); renderCategories(); await loadDishes(); return renderMenuLens(); }
     if (action === 'notes-today') { selectNotesDate(today()); state.noteViewFilter = 'all'; return; }
     if (action === 'notes-open' || action === 'notes-high') { state.noteViewFilter = action === 'notes-open' ? 'open' : 'high'; $$('.notes-tools [data-note-view-filter]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.noteViewFilter === state.noteViewFilter))); return renderSharedNotes(); }
     if (action === 'notes-pinned') { state.notePinnedOnly = !state.notePinnedOnly; $('#btnNotesPinned')?.setAttribute('aria-pressed', String(state.notePinnedOnly)); return renderSharedNotes(); }
-    if (action === 'notes-agenda') return $('#notesAgendaTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    if (action === 'pets-all' || action === 'pets-attention' || action === 'pets-due') { state.petFilter = action === 'pets-all' ? 'all' : action === 'pets-attention' ? 'attention' : 'due-soon'; $$('.pet-filter button').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.petFilter === state.petFilter))); renderPets(); return $('#petOverviewTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    if (action === 'notes-agenda') return $('#notesAgendaTitle')?.scrollIntoView({ behavior: motionBehavior(), block: 'center' });
+    if (action === 'pets-all' || action === 'pets-attention' || action === 'pets-due') { state.petFilter = action === 'pets-all' ? 'all' : action === 'pets-attention' ? 'attention' : 'due-soon'; $$('.pet-filter button').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.petFilter === state.petFilter))); renderPets(); return $('#petOverviewTitle')?.scrollIntoView({ behavior: motionBehavior(), block: 'start' }); }
     if (action === 'pets-weight') return openPetQuick('weight');
-    if (action === 'pets-history') return $('#petHistoryTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (action === 'pets-history') return $('#petHistoryTitle')?.scrollIntoView({ behavior: motionBehavior(), block: 'start' });
     if (action === 'recommendations-all') { state.recommendationFilter = 'all'; state.recommendationVisit = 'all'; state.recommendationRatingFilter = 0; state.recommendationTravelOnly = false; return renderRecommendations(); }
     if (action === 'recommendations-want') return runRecommendationQuick('want');
     if (action === 'recommendations-visited') return runRecommendationQuick('visited');
     if (action === 'recommendations-rating') return runRecommendationQuick('rating');
     if (action === 'recommendations-travel') return runRecommendationQuick('travel');
     if (action === 'polls-open') { const poll = state.familyPolls.find(item => pollState(item).className === 'open'); return poll ? openSharedPoll(poll.share_code) : openPollComposer('dinner'); }
-    if (action === 'polls-votes') return dom.pollsList?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    if (action === 'polls-deadline') return dom.pollsList?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    if (action === 'polls-template') return $('.poll-templates')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (action === 'polls-votes') return dom.pollsList?.scrollIntoView({ behavior: motionBehavior(), block: 'start' });
+    if (action === 'polls-deadline') return dom.pollsList?.scrollIntoView({ behavior: motionBehavior(), block: 'start' });
+    if (action === 'polls-template') return $('.poll-templates')?.scrollIntoView({ behavior: motionBehavior(), block: 'center' });
     if (action === 'polls-create') return openPollComposer();
   }
 
@@ -1150,7 +1184,7 @@
   }
 
   async function openSharedPoll(code) {
-    state.sharedPoll = await api(`/api/family-polls/share/${encodeURIComponent(code)}?voter_key=${encodeURIComponent(pollVoterKey())}`);
+    state.sharedPoll = await api(`/api/family-polls/share/${encodeURIComponent(code)}`);
     renderSharedPoll();
     openModal('sharedPollModal');
   }
@@ -1160,7 +1194,7 @@
     const voterName = $('#sharedPollVoterName')?.value.trim() || '';
     if (!voterName) return toast('先写下你的称呼，再投票', 'error');
     localStorage.setItem('fm_family_poll_voter_name', voterName);
-    const poll = await api(`/api/family-polls/share/${encodeURIComponent(state.sharedPoll.share_code)}/vote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ option_id: optionId, voter_key: pollVoterKey(), voter_name: voterName }) });
+    const poll = await api(`/api/family-polls/share/${encodeURIComponent(state.sharedPoll.share_code)}/vote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ option_id: optionId, voter_name: voterName }) });
     state.sharedPoll = poll;
     renderSharedPoll();
     if (state.view === 'polls') loadFamilyPolls().catch(() => {});
@@ -1220,7 +1254,7 @@
     const fields = prefix === 'checkin'
       ? { latitude: dom.checkinLatitude, longitude: dom.checkinLongitude }
       : { latitude: dom.recommendationLatitude, longitude: dom.recommendationLongitude };
-    toast('正在获取当前位置...', 'info');
+    toast('正在获取当前位置…', 'info');
     navigator.geolocation.getCurrentPosition(position => {
       fields.latitude.value = position.coords.latitude.toFixed(6);
       fields.longitude.value = position.coords.longitude.toFixed(6);
@@ -1231,7 +1265,7 @@
   async function createRecommendation() {
     const button = $('#btnSaveRecommendation');
     button.disabled = true;
-    dom.recommendationSaveStatus.textContent = '正在保存...';
+    dom.recommendationSaveStatus.textContent = '正在保存…';
     try {
       const tags = dom.recommendationTags.value.split(/[,，]/).map(item => item.trim()).filter(Boolean).slice(0, 12);
       const record = await api('/api/family-recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: dom.recommendationTitle.value, kind: dom.recommendationKind.value, created_by: Number(dom.recommendationAuthor.value) || null, region: dom.recommendationRegion.value, address: dom.recommendationAddress.value, latitude: dom.recommendationLatitude.value, longitude: dom.recommendationLongitude.value, description: dom.recommendationDescription.value, visit_status: dom.recommendationVisitStatus.value, rating: Number(dom.recommendationRating.value), tags, revisit_reason: dom.recommendationRevisitReason.value }) });
@@ -1248,7 +1282,7 @@
   async function createCheckin() {
     const button = $('#btnSaveCheckin');
     button.disabled = true;
-    dom.checkinSaveStatus.textContent = '正在保存...';
+    dom.checkinSaveStatus.textContent = '正在保存…';
     try {
       const record = await api('/api/family-checkins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recommendation_id: Number(dom.checkinRecommendation.value) || null, checkin_date: dom.checkinDate.value, created_by: Number(dom.checkinAuthor.value) || null, region: dom.checkinRegion.value, address: dom.checkinAddress.value, latitude: dom.checkinLatitude.value, longitude: dom.checkinLongitude.value, note: dom.checkinNote.value }) });
       closeModal('checkinModal');
@@ -1271,7 +1305,7 @@
       dot.classList.toggle('done', value < step);
       dot.toggleAttribute('aria-current', value === step);
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: motionBehavior() });
     if (step === 2 || step === 3) $('#mealDate').textContent = `${dateLabel(state.date)} · ${mealName(state.meal)}`;
     if (step === 3) { renderMenuStatusPanel(); renderMenuLens(); }
   }
@@ -1282,11 +1316,13 @@
     lastFocus = document.activeElement;
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    setTimeout(() => overlay.querySelector('input, select, textarea, button')?.focus(), 0);
+    if (window.matchMedia('(min-width: 768px)').matches) setTimeout(() => overlay.querySelector('input, select, textarea, button')?.focus(), 0);
   }
 
   function closeModal(id) {
-    $(`#${id}`)?.classList.add('hidden');
+    const overlay = $(`#${id}`);
+    overlay?.classList.add('hidden');
+    overlay?.querySelector('form')?.classList.remove('is-dirty');
     if (id === 'sharedPollModal' && new URLSearchParams(window.location.search).has('vote')) history.replaceState({}, '', window.location.pathname);
     if ($$('.modal-overlay:not(.hidden)').length === 0) document.body.style.overflow = '';
     if (lastFocus?.isConnected) lastFocus.focus();
@@ -1306,7 +1342,7 @@
   function renderCategories() {
     const values = ['全部', ...state.categories.map(item => item.category)];
     const counts = new Map(state.categories.map(item => [item.category, item.count]));
-    dom.category.innerHTML = values.map(category => `<button class="chip ${state.category === category ? 'active' : ''}" data-category="${esc(category)}" aria-pressed="${state.category === category}">${esc(category)}${category === '鍏ㄩ儴' ? '' : ` <small>${counts.get(category) || 0}</small>`}</button>`).join('');
+    dom.category.innerHTML = values.map(category => `<button class="chip ${state.category === category ? 'active' : ''}" data-category="${esc(category)}" aria-pressed="${state.category === category}">${esc(category)}${category === '全部' ? '' : ` <small>${counts.get(category) || 0}</small>`}</button>`).join('');
     const defaults = ['家常菜', '火锅', '西餐', '日料', '面食', '汤羹', '甜品饮品'];
     const options = [...new Set([...defaults, ...state.categories.map(item => item.category)])];
     dom.dishCategory.innerHTML = options.map(category => `<option value="${esc(category)}">${esc(category)}</option>`).join('');
@@ -1368,13 +1404,14 @@
     const selected = state.plan.filter(item => item.meal === state.meal);
     const mine = state.selections[state.meal];
     const waiting = Math.max(0, state.users.length - selected.length);
-    panel.innerHTML = `<span class="menu-date-status"><b>${dateLabel(state.date)}</b><small>${mealName(state.meal)}</small><span class="menu-date-actions"><button type="button" data-menu-date-change="-1" aria-label="查看前一天">‹</button><button type="button" data-menu-date-change="0">今天</button><button type="button" data-menu-date-change="1" aria-label="查看后一天">›</button></span></span><span><b>${selected.length}/${state.users.length || 0}</b><small>家人已选</small></span><span><b>${mine ? '已完成' : waiting ? `待 ${waiting} 人` : '待选择'}</b><small>${mine ? mine.dish_name || '本餐已登记' : '本餐进度'}</small></span>`;
+    panel.innerHTML = `<span class="menu-date-status"><b>${esc(dateLabel(state.date))}</b><small>${esc(mealName(state.meal))}</small><span class="menu-date-actions"><button type="button" data-menu-date-change="-1" aria-label="查看前一天">‹</button><button type="button" data-menu-date-change="0">今天</button><button type="button" data-menu-date-change="1" aria-label="查看后一天">›</button></span></span><span><b>${selected.length}/${state.users.length || 0}</b><small>家人已选</small></span><span><b>${mine ? '已完成' : waiting ? `待 ${waiting} 人` : '待选择'}</b><small>${mine ? esc(mine.dish_name || '本餐已登记') : '本餐进度'}</small></span>`;
   }
 
   async function changeMealDate(change) {
     const current = new Date(`${state.date}T00:00:00`);
     current.setDate(current.getDate() + change);
     state.date = localDate(current);
+    syncUrlState();
     $('#mealDate').textContent = `${dateLabel(state.date)} · ${mealName(state.meal)}`;
     await refreshDashboard();
     toast(`已切换到${dateLabel(state.date)}`, 'info');
@@ -1561,7 +1598,7 @@
   }
 
   async function openRecipe(dishId) {
-    dom.recipeTitle.textContent = '正在准备食谱...';
+    dom.recipeTitle.textContent = '正在准备食谱…';
     dom.recipeEyebrow.textContent = '';
     dom.recipeMeta.replaceChildren();
     dom.recipeIngredients.replaceChildren();
@@ -1612,7 +1649,7 @@
     state.recipeDone.add(next);
     saveRecipeProgress();
     renderRecipe();
-    document.querySelector(`[data-recipe-step="${next}"]`)?.closest('.recipe-step')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.querySelector(`[data-recipe-step="${next}"]`)?.closest('.recipe-step')?.scrollIntoView({ behavior: motionBehavior(), block: 'center' });
     if (state.recipeDone.size === state.recipe.steps.length) toast('这道菜完成啦，开饭！', 'success');
   }
 
@@ -1697,7 +1734,7 @@
   }
 
   async function showStats() {
-    dom.stats.innerHTML = '<p class="stats-loading">正在整理餐桌数据...</p>';
+    dom.stats.innerHTML = '<p class="stats-loading">正在整理餐桌数据…</p>';
     openModal('statsModal');
     const data = await api('/api/stats');
     dom.stats.innerHTML = `<div class="stats-overview"><div><strong>${data.totals.dishes}</strong><span>道菜</span></div><div><strong>${data.totals.selections}</strong><span>次选择</span></div><div><strong>${data.recentCount}</strong><span>近七天</span></div></div><h4>大家常点</h4>${data.top.length ? `<ol class="stats-top">${data.top.map(item => `<li><span>${esc(item.name)}</span><b>${item.times} 次</b></li>`).join('')}</ol>` : '<p class="feed-empty">还没有足够记录，先点一顿吧。</p>'}`;
@@ -1705,7 +1742,10 @@
 
   async function showVotes() {
     const votes = await api(`/api/votes${state.me ? `?user_id=${state.me.id}` : ''}`);
-    dom.voteList.innerHTML = votes.map(vote => `<section class="vote-card"><h4>${esc(vote.title)}</h4><p>${esc(vote.vote_date)} · ${mealName(vote.meal)}</p>${vote.options.map(option => `<button class="vote-option ${vote.userVote === option.id ? 'selected' : ''}" data-vote-id="${vote.id}" data-option-id="${option.id}">${esc(option.dish_name)} <span>${option.vote_count} 票</span></button>`).join('')}<button class="btn-secondary vote-close" data-close-vote="${vote.id}" ${vote.status === 'closed' ? 'disabled' : ''}>${vote.status === 'closed' ? '已结束' : '结束投票'}</button></section>`).join('') || '<p class="feed-empty">暂无投票</p>';
+    dom.voteList.innerHTML = votes.map(vote => {
+      const canClose = vote.status === 'open' && state.me?.id === vote.created_by;
+      return `<section class="vote-card"><h4>${esc(vote.title)}</h4><p>${esc(vote.vote_date)} · ${mealName(vote.meal)}</p>${vote.options.map(option => `<button class="vote-option ${vote.userVote === option.id ? 'selected' : ''}" data-vote-id="${vote.id}" data-option-id="${option.id}">${esc(option.dish_name)} <span>${option.vote_count} 票</span></button>`).join('')}<button class="btn-secondary vote-close" data-close-vote="${vote.id}" ${canClose ? '' : 'disabled'}>${vote.status === 'closed' ? '已结束' : canClose ? '结束投票' : '仅发起人可结束'}</button></section>`;
+    }).join('') || '<p class="feed-empty">暂无投票</p>';
     dom.voteDishes.innerHTML = state.dishes.map(dish => `<label><input type="checkbox" value="${dish.id}"> ${esc(dish.name)}</label>`).join('');
     $('#voteDate').value = today();
   }
@@ -1719,9 +1759,16 @@
 
   async function showNotify() {
     const [targets, config, reminders] = await Promise.all([api('/api/notify/targets'), api('/api/notify/config'), api('/api/reminders')]);
-    dom.notifyTargets.innerHTML = targets.map(target => `<div class="admin-row"><span>${esc(target.name)} ${esc(target.email || target.phone)}</span><button class="admin-del" data-delete-target="${target.id}">删除</button></div>`).join('') || '<p class="feed-empty">暂无通知人</p>';
-    $('#cfgEmailHost').value = config.email.host || ''; $('#cfgEmailUser').value = config.email.user || ''; $('#cfgEmailPass').value = config.email.pass || '';
-    $('#cfgSmsKey').value = config.sms.accessKeyId || ''; $('#cfgSmsSecret').value = config.sms.accessKeySecret || ''; $('#cfgSmsSign').value = config.sms.signName || ''; $('#cfgSmsTpl').value = config.sms.templateCode || ''; $('#cfgSmsReminderTpl').value = config.sms.reminderTemplateCode || '';
+    dom.notifyTargets.innerHTML = targets.map(target => `<div class="admin-row"><span>${esc(target.name)} ${esc(target.email || target.phone || '已配置')}</span><button class="admin-del" data-delete-target="${target.id}">删除</button></div>`).join('') || '<p class="feed-empty">暂无通知人</p>';
+    const setSecretField = (selector, placeholder) => { const field = $(selector); field.value = ''; field.placeholder = placeholder; };
+    setSecretField('#cfgEmailHost', config.email.host_masked ? `已配置 ${config.email.host_masked}，留空不修改` : 'SMTP 服务器');
+    setSecretField('#cfgEmailUser', config.email.user_masked ? `已配置 ${config.email.user_masked}，留空不修改` : '邮箱账号');
+    setSecretField('#cfgEmailPass', config.email.has_password ? '已配置授权码，留空不修改' : '密码/授权码');
+    setSecretField('#cfgSmsKey', config.sms.has_access_key_id ? 'AccessKey ID 已配置，留空不修改' : 'AccessKey ID');
+    setSecretField('#cfgSmsSecret', config.sms.has_access_key_secret ? 'AccessKey Secret 已配置，留空不修改' : 'AccessKey Secret');
+    setSecretField('#cfgSmsSign', config.sms.has_sign_name ? '短信签名已配置，留空不修改' : '短信签名');
+    setSecretField('#cfgSmsTpl', config.sms.has_template_code ? '点菜模板已配置，留空不修改' : '点菜模板 CODE');
+    setSecretField('#cfgSmsReminderTpl', config.sms.has_reminder_template_code ? '提醒模板已配置，留空不修改' : '提醒模板 CODE');
     const selectionStatus = config.sms.ready ? '点菜短信已就绪' : `点菜短信尚未就绪：${(config.sms.missing || []).join('、')}`;
     const reminderMissing = config.sms.reminderMissing?.length ? config.sms.reminderMissing : (config.sms.missing || []);
     const reminderStatus = config.sms.remindersReady ? '用餐提醒短信已就绪' : `用餐提醒短信尚未就绪：${reminderMissing.join('、')}`;
@@ -1777,7 +1824,9 @@
       if (button.dataset.noteQuick) return openNoteQuick(button.dataset.noteQuick);
       if (button.dataset.petQuick) return openPetQuick(button.dataset.petQuick);
       if (button.dataset.recommendationQuick) return runRecommendationQuick(button.dataset.recommendationQuick);
-      if (button.dataset.superFilter) { state.superRecommendationFilter = button.dataset.superFilter; $$('.super-recommendation-filter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderSuperRecommendations(); }
+      if (button.dataset.superFilter) { state.superRecommendationFilter = button.dataset.superFilter; state.superRecommendationExpanded = false; $$('.super-recommendation-filter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderSuperRecommendations(); }
+      if (button.id === 'btnToggleRecommendations') { state.recommendationExpanded = !state.recommendationExpanded; return renderRecommendations(); }
+      if (button.id === 'btnToggleSuperRecommendations') { state.superRecommendationExpanded = !state.superRecommendationExpanded; return renderSuperRecommendations(); }
       if (button.dataset.superMap) return showSuperRecommendation(button.dataset.superMap);
       if (button.dataset.superSave) return saveSuperRecommendation(button.dataset.superSave, button);
       if (button.dataset.pollTemplate) return openPollComposer(button.dataset.pollTemplate);
@@ -1790,40 +1839,35 @@
       if (button.id === 'btnHome' || button.id === 'btnNotesBack' || button.id === 'btnRecommendationsBack' || button.id === 'btnPollsBack') return setView('home');
       if (button.id === 'btnPetsBack') return setView('home');
       if (button.id === 'btnOpenNote') return openNoteComposer();
-      if (button.id === 'btnCreateNote') return createSharedNote();
       if (button.id === 'btnExportNotes') return exportCurrentNotes();
       if (button.id === 'btnNotesPinned') { state.notePinnedOnly = !state.notePinnedOnly; button.setAttribute('aria-pressed', String(state.notePinnedOnly)); button.textContent = state.notePinnedOnly ? '查看全部' : '只看固定'; return renderSharedNotes(); }
       if (button.id === 'btnNotesMonthPrev') return shiftNotesMonth(-1);
-      if (button.id === 'btnNotesMonthToday') { state.noteCalendarMonth = today().slice(0, 7); return loadNotesOverview(); }
+      if (button.id === 'btnNotesMonthToday') { state.noteCalendarMonth = today().slice(0, 7); syncUrlState('push'); return loadNotesOverview(); }
       if (button.id === 'btnNotesMonthNext') return shiftNotesMonth(1);
       if (button.dataset.noteDate) return selectNotesDate(button.dataset.noteDate);
       if (button.dataset.noteViewFilter) { state.noteViewFilter = button.dataset.noteViewFilter; $$('.notes-tools [data-note-view-filter]').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderSharedNotes(); }
       if (button.id === 'btnOpenPetRecord') return openPetRecordForm();
-      if (button.id === 'btnSavePetRecord') return createPetRecord();
       if (button.id === 'btnPetDetailRecord') { const petId = state.selectedPetId; closeModal('petDetailModal'); openPetRecordForm(); if (petId) dom.petRecordPet.value = String(petId); return; }
       if (button.id === 'btnOpenRecommendation') return openRecommendationForm();
       if (button.id === 'btnOpenPollComposer') return openPollComposer();
-      if (button.id === 'btnCreateFamilyPoll') return createFamilyPoll();
       if (button.id === 'btnAddPollOption') return addPollOptionInput();
       if (button.dataset.removePollOption !== undefined) { button.parentElement?.remove(); return; }
       if (button.dataset.openFamilyPoll) return openSharedPoll(button.dataset.openFamilyPoll);
       if (button.dataset.shareFamilyPoll) { const shared = await copyFamilyPollLink(button.dataset.shareFamilyPoll, true); return toast(shared ? '投票链接已准备好' : '未能自动分享，可从地址栏复制链接', shared ? 'success' : 'info'); }
       if (button.dataset.sharedPollOption) return voteSharedPoll(Number(button.dataset.sharedPollOption));
       if (button.dataset.closeFamilyPoll) return closeFamilyPoll(Number(button.dataset.closeFamilyPoll));
-      if (button.id === 'btnSaveRecommendation') return createRecommendation();
       if (button.id === 'btnOpenCheckin') return openCheckinForm();
-      if (button.id === 'btnSaveCheckin') return createCheckin();
       if (button.id === 'btnLocateRecommendation') return useCurrentLocation('recommendation');
       if (button.id === 'btnLocateCheckin') return useCurrentLocation('checkin');
       if (button.id === 'btnUseCurrentLocation') { openCheckinForm(); return useCurrentLocation('checkin'); }
-      if (button.dataset.recommendationFilter) { state.recommendationFilter = button.dataset.recommendationFilter; $$('.recommendation-filter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderRecommendations(); }
-      if (button.dataset.recommendationRegion) { state.recommendationRegion = button.dataset.recommendationRegion; $$('#recommendationRegionFilter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderRecommendations(); }
-      if (button.dataset.recommendationYear) { state.recommendationYear = button.dataset.recommendationYear; $$('#recommendationYearFilter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderRecommendations(); }
+      if (button.dataset.recommendationFilter) { state.recommendationFilter = button.dataset.recommendationFilter; state.recommendationExpanded = false; $$('.recommendation-filter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); syncUrlState('push'); return renderRecommendations(); }
+      if (button.dataset.recommendationRegion) { state.recommendationRegion = button.dataset.recommendationRegion; state.recommendationExpanded = false; $$('#recommendationRegionFilter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); syncUrlState('push'); return renderRecommendations(); }
+      if (button.dataset.recommendationYear) { state.recommendationYear = button.dataset.recommendationYear; state.recommendationExpanded = false; $$('#recommendationYearFilter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); syncUrlState('push'); return renderRecommendations(); }
       if (button.dataset.openGallery) return openGallery(Number(button.dataset.openGallery));
       if (button.dataset.memoryCard) return openMemoryCard(Number(button.dataset.memoryCard));
-      if (button.dataset.showRecommendation) { const item = state.savedRecommendations.find(record => record.id === Number(button.dataset.showRecommendation)); if (!hasCoordinates(item)) return toast('这条推荐还没有坐标，可编辑后添加', 'info'); setMapTarget(item, item.title); return dom.recommendationMap.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      if (button.dataset.showRecommendation) { const item = state.savedRecommendations.find(record => record.id === Number(button.dataset.showRecommendation)); if (!hasCoordinates(item)) return toast('这条推荐还没有坐标，可编辑后添加', 'info'); setMapTarget(item, item.title); return dom.recommendationMap.scrollIntoView({ behavior: motionBehavior(), block: 'center' }); }
       if (button.dataset.checkinRecommendation) return openCheckinForm(Number(button.dataset.checkinRecommendation));
-      if (button.dataset.showCheckin) { const item = state.checkins.find(record => record.id === Number(button.dataset.showCheckin)); if (!hasCoordinates(item)) return toast('这次打卡没有坐标', 'info'); setMapTarget(item, item.recommendation_title || '打卡地点'); return dom.recommendationMap.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      if (button.dataset.showCheckin) { const item = state.checkins.find(record => record.id === Number(button.dataset.showCheckin)); if (!hasCoordinates(item)) return toast('这次打卡没有坐标', 'info'); setMapTarget(item, item.recommendation_title || '打卡地点'); return dom.recommendationMap.scrollIntoView({ behavior: motionBehavior(), block: 'center' }); }
       if (button.dataset.selectionNote) { dom.selectionNote.value = button.dataset.selectionNote; return dom.selectionNote.focus(); }
       if (button.dataset.noteTag) return addNoteTag(button.dataset.noteTag);
       if (button.dataset.petFilter) { state.petFilter = button.dataset.petFilter; $$('.pet-filter button').forEach(item => { const active = item === button; item.setAttribute('aria-pressed', String(active)); }); return renderPets(); }
@@ -1845,7 +1889,7 @@
       if (button.dataset.switchId) return chooseUser(state.users.find(user => user.id === Number(button.dataset.switchId)));
       if ('addUser' in button.dataset) { renderAvatarPicker(); return openModal('addUserModal'); }
       if (button.dataset.avatar) { state.selectedAvatar = button.dataset.avatar; return renderAvatarPicker(); }
-      if (button.dataset.category) { state.category = button.dataset.category; await loadDishes(); return renderCategories(); }
+      if (button.dataset.category) { state.category = button.dataset.category; syncUrlState(); await loadDishes(); return renderCategories(); }
       if (button.dataset.dishId) return chooseDish(Number(button.dataset.dishId));
       if (button.dataset.recipeId) return openRecipe(Number(button.dataset.recipeId));
       if (button.dataset.dishMode) { state.dishMode = button.dataset.dishMode; $$('#dishModes .dish-mode').forEach(item => { const active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); }); return renderDishes(); }
@@ -1853,7 +1897,7 @@
       if (button.dataset.deleteDish) { if (confirm('删除这道菜及其相关选择？')) { await api(`/api/dishes/${button.dataset.deleteDish}`, { method: 'DELETE' }); await loadDishes(); } return; }
       if (button.dataset.deleteTarget) { await api(`/api/notify/targets/${button.dataset.deleteTarget}`, { method: 'DELETE' }); return showNotify(); }
       if (button.dataset.voteId) { if (!state.me) return toast('请先选择家人', 'error'); await api(`/api/votes/${button.dataset.voteId}/vote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: state.me.id, option_id: Number(button.dataset.optionId) }) }); return showVotes(); }
-      if (button.dataset.closeVote) { await api(`/api/votes/${button.dataset.closeVote}/close`, { method: 'POST' }); return showVotes(); }
+      if (button.dataset.closeVote) { if (!state.me) return toast('请先选择投票发起人', 'error'); await api(`/api/votes/${button.dataset.closeVote}/close`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ created_by: state.me.id }) }); return showVotes(); }
       if (button.dataset.planDate) { state.date = button.dataset.planDate; state.meal = button.dataset.planMeal; closeModal('weeklyModal'); setStep(3); await Promise.all([loadDishes(), loadPlan(), loadSelections(), loadFavorites()]); return; }
       if (button.dataset.menuDateChange != null) return changeMealDate(Number(button.dataset.menuDateChange));
       if (button.id === 'btnMealDatePrev') return changeMealDate(-1);
@@ -1909,7 +1953,26 @@
   });
 
   dom.search.addEventListener('input', () => { state.query = dom.search.value.trim(); dom.searchClear.classList.toggle('hidden', !state.query); clearTimeout(dom.search.timer); dom.search.timer = setTimeout(() => loadDishes().catch(error => toast(error.message, 'error')), 250); });
-  dom.noteDate.addEventListener('change', () => { state.noteCalendarMonth = (dom.noteDate.value || today()).slice(0, 7); loadSharedNotes().catch(error => toast(error.message, 'error')); loadNotesOverview().catch(() => {}); saveNoteDraft(); });
+  [
+    ['#pollComposerForm', createFamilyPoll],
+    ['#noteForm', createSharedNote],
+    ['#petRecordForm', createPetRecord],
+    ['#recommendationForm', createRecommendation],
+    ['#checkinForm', createCheckin]
+  ].forEach(([selector, submit]) => $(selector)?.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!event.currentTarget.reportValidity()) return;
+    submit().catch(error => toast(error.message, 'error'));
+  }));
+  $$('#pollComposerForm, #noteForm, #petRecordForm, #recommendationForm, #checkinForm').forEach(form => {
+    form.addEventListener('input', () => form.classList.add('is-dirty'));
+  });
+  window.addEventListener('beforeunload', event => {
+    if (!document.querySelector('form.is-dirty')) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+  dom.noteDate.addEventListener('change', () => { state.noteCalendarMonth = (dom.noteDate.value || today()).slice(0, 7); syncUrlState('push'); loadSharedNotes().catch(error => toast(error.message, 'error')); loadNotesOverview().catch(() => {}); saveNoteDraft(); });
   dom.noteAuthor.addEventListener('change', () => { renderNoteForm(); saveNoteDraft(); });
   dom.noteContent.addEventListener('input', () => { updateNoteCount(); saveNoteDraft(); });
   dom.notePriority.addEventListener('change', saveNoteDraft);
@@ -1939,7 +2002,7 @@
     renderRecipe();
     if (state.recipeDone.size === state.recipe.steps.length) toast('这道菜完成啦，开饭！', 'success');
   });
-  $$('.meal-card').forEach(card => card.addEventListener('click', () => { state.meal = card.dataset.meal; localStorage.setItem('fm_last_meal', state.meal); setStep(3); Promise.all([loadDishes(), loadRecentSelection()]).catch(error => toast(error.message, 'error')); }));
+  $$('.meal-card').forEach(card => card.addEventListener('click', () => { state.meal = card.dataset.meal; localStorage.setItem('fm_last_meal', state.meal); syncUrlState(); setStep(3); Promise.all([loadDishes(), loadRecentSelection()]).catch(error => toast(error.message, 'error')); }));
   dom.checkinRecommendation.addEventListener('change', fillCheckinFromRecommendation);
   document.addEventListener('keydown', event => {
     if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { event.preventDefault(); dom.search.focus(); return; }
@@ -1961,13 +2024,32 @@
   });
   $$('.modal-overlay').forEach(overlay => overlay.addEventListener('click', event => { if (event.target === overlay) closeModal(overlay.id); }));
 
+  window.addEventListener('popstate', () => {
+    const params = new URLSearchParams(window.location.search);
+    const view = validViews.has(params.get('view')) ? params.get('view') : 'home';
+    if (view === 'menu') {
+      state.date = /^\d{4}-\d{2}-\d{2}$/.test(params.get('date') || '') ? params.get('date') : today();
+      state.meal = ['lunch', 'dinner'].includes(params.get('meal')) ? params.get('meal') : state.meal;
+      state.category = params.get('category') || '全部';
+    }
+    if (view === 'notes') state.noteCalendarMonth = params.get('month') || today().slice(0, 7);
+    if (view === 'recommendations') {
+      state.recommendationFilter = params.get('kind') || 'all';
+      state.recommendationRegion = params.get('region') || 'all';
+      state.recommendationYear = params.get('year') || 'all';
+    }
+    setView(view, 'none');
+    if (view === 'menu') Promise.all([loadDishes(), refreshDashboard()]).catch(error => toast(error.message, 'error'));
+  });
+
   async function initialize() {
     try {
+      const initialView = state.view;
       dom.whoError.classList.add('hidden');
       await Promise.all([loadUsers(), loadCategories(), loadFeed(), loadRecommendations()]);
       if (state.me) { updateIdentity(); setStep(2); await Promise.all([refreshDashboard(), loadPreferences()]); } else { setStep(1); renderPreferenceBar(); }
       connectEvents();
-      setView('home');
+      setView(initialView, 'replace');
       const sharedCode = new URLSearchParams(window.location.search).get('vote');
       if (sharedCode) openSharedPoll(sharedCode).catch(error => toast(error.message, 'error'));
     } catch (error) { dom.whoError.classList.remove('hidden'); toast(error.message, 'error'); }

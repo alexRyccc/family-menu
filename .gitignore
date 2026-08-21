@@ -2,10 +2,16 @@ node_modules/
 data/*.db
 data/*.db-shm
 data/*.db-wal
+data/backups/
+data/.poll-cookie-secret
+data/.runtime-check-secret
+data/runtime-check.db*
 notify-config.json
 family-menu-*.log
 family-menu-*.err.log
 .playwright-cli/
+/qa-*.png
+/test-*.png
 
 # Superseded source images and obsolete atlases are kept locally only.
 uploads/dish-*.jpg

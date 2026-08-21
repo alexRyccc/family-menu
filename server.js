@@ -3,7 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const dns = require('dns').promises;
-const net = require('net');
 const Database = require('better-sqlite3');
 const multer = require('multer');
 const crypto = require('crypto');
@@ -12,18 +11,35 @@ const { rateLimit } = require('express-rate-limit');
 const notify = require('./notify');
 const { travelCities } = require('./travel-cities');
 const { superRecommendations } = require('./super-recommendations');
+const { positiveInt, isDate, isTime, isMeal, isPrivateIp } = require('./lib/validation');
+const { normalizeImageBuffer, promotePendingAttachment, cleanupPendingAttachments } = require('./lib/image-pipeline');
+const { createBackup, pruneBackups, runMigrations, integrityReport } = require('./lib/db-maintenance');
 
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'data', 'family.db');
+const DB_PATH = process.env.FAMILY_DB_PATH || path.join(__dirname, 'data', 'family.db');
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
+const BACKUP_DIR = process.env.FAMILY_BACKUP_DIR || path.join(__dirname, 'data', 'backups');
+const COOKIE_SECRET_PATH = process.env.FAMILY_COOKIE_SECRET_PATH || path.join(__dirname, 'data', '.poll-cookie-secret');
 
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
+const databaseExisted = fs.existsSync(DB_PATH) && fs.statSync(DB_PATH).size > 0;
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');
+if (databaseExisted && process.env.FAMILY_SKIP_STARTUP_BACKUP !== '1') {
+  try {
+    const backup = createBackup(db, BACKUP_DIR);
+    pruneBackups(BACKUP_DIR, 10);
+    console.log(`[数据库备份] ${backup}`);
+  } catch (error) {
+    console.warn('[数据库备份失败]', error.message);
+  }
+}
 const reminderRetryAfter = new Map();
+const selectionNotificationCooldown = new Map();
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -291,33 +307,53 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_note_reads_user ON note_reads(user_id, note_id);
 `);
 
-// Existing selections and notes retain their author; only update this family member's visual.
+function hasColumn(table, column) {
+  return db.prepare(`PRAGMA table_info(${table})`).all().some(item => item.name === column);
+}
+
+runMigrations(db, [
+  {
+    version: 1,
+    name: 'baseline-existing-family-schema',
+    up() {
+      if (!hasColumn('selections', 'note')) db.exec("ALTER TABLE selections ADD COLUMN note TEXT NOT NULL DEFAULT ''");
+      if (!hasColumn('shared_notes', 'pinned')) db.exec("ALTER TABLE shared_notes ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0");
+      for (const [column, definition] of [['is_task', "INTEGER NOT NULL DEFAULT 0"], ['priority', "TEXT NOT NULL DEFAULT 'normal'"], ['due_date', "TEXT NOT NULL DEFAULT ''"], ['task_done', "INTEGER NOT NULL DEFAULT 0"], ['completed_by', 'INTEGER'], ['completed_at', 'TEXT']]) {
+        if (!hasColumn('shared_notes', column)) db.exec(`ALTER TABLE shared_notes ADD COLUMN ${column} ${definition}`);
+      }
+      if (!hasColumn('pets', 'gender')) db.exec("ALTER TABLE pets ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
+      if (!hasColumn('recommendations', 'visited_label')) db.exec("ALTER TABLE recommendations ADD COLUMN visited_label TEXT NOT NULL DEFAULT ''");
+      if (!hasColumn('recommendations', 'travel_key')) db.exec("ALTER TABLE recommendations ADD COLUMN travel_key TEXT NOT NULL DEFAULT ''");
+      for (const [column, definition] of [['rating', 'INTEGER NOT NULL DEFAULT 0'], ['tags', "TEXT NOT NULL DEFAULT '[]'"], ['revisit_reason', "TEXT NOT NULL DEFAULT ''"], ['visit_status', "TEXT NOT NULL DEFAULT 'want'"]]) {
+        if (!hasColumn('recommendations', column)) db.exec(`ALTER TABLE recommendations ADD COLUMN ${column} ${definition}`);
+      }
+      for (const [column, definition] of [['clinic', "TEXT NOT NULL DEFAULT ''"], ['medication', "TEXT NOT NULL DEFAULT ''"], ['weight_kg', 'REAL'], ['attachment_path', "TEXT NOT NULL DEFAULT ''"], ['next_due_date', "TEXT NOT NULL DEFAULT ''"]]) {
+        if (!hasColumn('pet_care_records', column)) db.exec(`ALTER TABLE pet_care_records ADD COLUMN ${column} ${definition}`);
+      }
+      db.exec('CREATE INDEX IF NOT EXISTS idx_shared_notes_agenda ON shared_notes(task_done, due_date, priority, note_date DESC)');
+    }
+  },
+  {
+    version: 2,
+    name: 'vote-referential-cleanup',
+    up() {
+      db.exec(`
+        DELETE FROM vote_selections WHERE option_id NOT IN (SELECT id FROM vote_options);
+        DELETE FROM vote_selections WHERE vote_id NOT IN (SELECT id FROM votes);
+        CREATE TRIGGER IF NOT EXISTS trg_vote_option_delete AFTER DELETE ON vote_options
+        BEGIN DELETE FROM vote_selections WHERE option_id = OLD.id; END;
+        CREATE TRIGGER IF NOT EXISTS trg_vote_delete AFTER DELETE ON votes
+        BEGIN
+          DELETE FROM vote_selections WHERE vote_id = OLD.id;
+          DELETE FROM vote_options WHERE vote_id = OLD.id;
+        END;
+      `);
+    }
+  }
+]);
+
+// Existing selections and notes retain their author; only update family visuals.
 db.prepare("UPDATE users SET avatar = '🐮' WHERE name = '猫姨姨'").run();
-if (!db.prepare('PRAGMA table_info(selections)').all().some(column => column.name === 'note')) {
-  db.exec("ALTER TABLE selections ADD COLUMN note TEXT NOT NULL DEFAULT ''");
-}
-if (!db.prepare('PRAGMA table_info(shared_notes)').all().some(column => column.name === 'pinned')) {
-  db.exec("ALTER TABLE shared_notes ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0");
-}
-for (const [column, definition] of [['is_task', "INTEGER NOT NULL DEFAULT 0"], ['priority', "TEXT NOT NULL DEFAULT 'normal'"], ['due_date', "TEXT NOT NULL DEFAULT ''"], ['task_done', "INTEGER NOT NULL DEFAULT 0"], ['completed_by', 'INTEGER'], ['completed_at', 'TEXT']]) {
-  if (!db.prepare('PRAGMA table_info(shared_notes)').all().some(item => item.name === column)) db.exec(`ALTER TABLE shared_notes ADD COLUMN ${column} ${definition}`);
-}
-db.exec('CREATE INDEX IF NOT EXISTS idx_shared_notes_agenda ON shared_notes(task_done, due_date, priority, note_date DESC)');
-if (!db.prepare('PRAGMA table_info(pets)').all().some(column => column.name === 'gender')) {
-  db.exec("ALTER TABLE pets ADD COLUMN gender TEXT NOT NULL DEFAULT ''");
-}
-if (!db.prepare('PRAGMA table_info(recommendations)').all().some(column => column.name === 'visited_label')) {
-  db.exec("ALTER TABLE recommendations ADD COLUMN visited_label TEXT NOT NULL DEFAULT ''");
-}
-if (!db.prepare('PRAGMA table_info(recommendations)').all().some(column => column.name === 'travel_key')) {
-  db.exec("ALTER TABLE recommendations ADD COLUMN travel_key TEXT NOT NULL DEFAULT ''");
-}
-for (const [column, definition] of [['rating', 'INTEGER NOT NULL DEFAULT 0'], ['tags', "TEXT NOT NULL DEFAULT '[]'"], ['revisit_reason', "TEXT NOT NULL DEFAULT ''"], ['visit_status', "TEXT NOT NULL DEFAULT 'want'"]]) {
-  if (!db.prepare('PRAGMA table_info(recommendations)').all().some(item => item.name === column)) db.exec(`ALTER TABLE recommendations ADD COLUMN ${column} ${definition}`);
-}
-for (const [column, definition] of [['clinic', "TEXT NOT NULL DEFAULT ''"], ['medication', "TEXT NOT NULL DEFAULT ''"], ['weight_kg', 'REAL'], ['attachment_path', "TEXT NOT NULL DEFAULT ''"], ['next_due_date', "TEXT NOT NULL DEFAULT ''"]]) {
-  if (!db.prepare('PRAGMA table_info(pet_care_records)').all().some(item => item.name === column)) db.exec(`ALTER TABLE pet_care_records ADD COLUMN ${column} ${definition}`);
-}
 db.prepare("UPDATE pets SET avatar = '/assets/pets/meimei.jpg', gender = '母猫' WHERE name = '妹妹'").run();
 db.prepare("UPDATE pets SET avatar = '/assets/pets/giao.jpg', gender = '公猫' WHERE name = 'giao'").run();
 db.prepare("UPDATE pets SET avatar = '/assets/pets/miemie.jpg', gender = '母猫' WHERE name = '咩咩'").run();
@@ -370,20 +406,39 @@ app.use('/api', rateLimit({
   legacyHeaders: false,
   skip: req => req.method === 'GET' || req.method === 'HEAD'
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+function publicActionLimiter({ windowMs, limit, message }) {
+  return rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    keyGenerator: () => 'public-family-app',
+    message: { error: message }
+  });
+}
+
+const notificationTestLimiter = publicActionLimiter({ windowMs: 60 * 60 * 1000, limit: 3, message: '测试通知次数过多，请一小时后再试' });
+const notificationConfigLimiter = publicActionLimiter({ windowMs: 60 * 60 * 1000, limit: 12, message: '通知配置修改过于频繁，请稍后再试' });
+const uploadLimiter = publicActionLimiter({ windowMs: 60 * 60 * 1000, limit: 30, message: '图片上传过于频繁，请稍后再试' });
+const destructiveLimiter = publicActionLimiter({ windowMs: 15 * 60 * 1000, limit: 80, message: '删除操作过于频繁，请稍后再试' });
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (/\.(?:html|js|css)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+    else if (filePath.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=604800');
+    else res.setHeader('Cache-Control', 'public, max-age=3600');
+  }
+}));
 app.use('/uploads', express.static(UPLOAD_DIR, {
   maxAge: '7d',
   setHeaders: res => res.setHeader('X-Content-Type-Options', 'nosniff')
 }));
 
+cleanupPendingAttachments(UPLOAD_DIR);
+
 const IMAGE_TYPES = new Map([
   ['image/jpeg', '.jpg'], ['image/png', '.png'], ['image/webp', '.webp'], ['image/gif', '.gif']
 ]);
-
-function positiveInt(value) {
-  const result = Number(value);
-  return Number.isSafeInteger(result) && result > 0 ? result : null;
-}
 
 const PREFERENCE_TAGS = new Set(['no_spicy', 'no_cilantro', 'no_seafood', 'light']);
 const PET_INTERVALS = { vaccine: 365, internal_deworming: 90, external_deworming: 30, bath: 30, nail_trim: 21, health_check: 180 };
@@ -398,14 +453,6 @@ function addDays(date, days) {
   const next = new Date(`${date}T00:00:00`);
   next.setDate(next.getDate() + days);
   return [next.getFullYear(), String(next.getMonth() + 1).padStart(2, '0'), String(next.getDate()).padStart(2, '0')].join('-');
-}
-
-function isMeal(value) {
-  return value === 'lunch' || value === 'dinner';
-}
-
-function isDate(value) {
-  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
 }
 
 function cleanCategory(value) {
@@ -476,16 +523,6 @@ function recipeForDish(dish) {
   return { dish_id: dish.id, dish_name: dish.name, category: dish.category, ...recipe, source: RECIPE_LIBRARY[dish.name] ? 'curated' : recipe.source };
 }
 
-function isPrivateIp(address) {
-  if (net.isIP(address) === 4) {
-    const [a, b] = address.split('.').map(Number);
-    return a === 10 || a === 127 || a === 0 || a >= 224 ||
-      (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
-  }
-  const normalized = address.toLowerCase();
-  return normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:');
-}
-
 async function validatePublicImageUrl(rawUrl) {
   const url = new URL(rawUrl);
   if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) {
@@ -496,6 +533,87 @@ async function validatePublicImageUrl(rawUrl) {
     throw new Error('图片地址不能指向本机或内网');
   }
   return url;
+}
+
+async function readLimitedResponse(response, limitBytes) {
+  if (!response.body) throw new Error('图片响应没有内容');
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limitBytes) {
+      await reader.cancel();
+      throw new Error('图片过大');
+    }
+    chunks.push(Buffer.from(value));
+  }
+  return Buffer.concat(chunks, total);
+}
+
+async function validatePublicHost(host) {
+  if (typeof host !== 'string' || !/^[a-zA-Z0-9.-]{1,253}$/.test(host) || host.startsWith('.') || host.endsWith('.')) {
+    throw new Error('SMTP 服务器地址格式不正确');
+  }
+  const addresses = await dns.lookup(host, { all: true });
+  if (!addresses.length || addresses.some(({ address }) => isPrivateIp(address))) {
+    throw new Error('SMTP 服务器不能指向本机、局域网或云元数据地址');
+  }
+  return host;
+}
+
+function publicNotifyTarget(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    email: notify.maskContact(row.email),
+    phone: notify.maskContact(row.phone),
+    has_email: Boolean(row.email),
+    has_phone: Boolean(row.phone),
+    created_at: row.created_at
+  };
+}
+
+function ensurePollCookieSecret() {
+  if (process.env.FAMILY_POLL_COOKIE_SECRET) return process.env.FAMILY_POLL_COOKIE_SECRET;
+  if (fs.existsSync(COOKIE_SECRET_PATH)) return fs.readFileSync(COOKIE_SECRET_PATH, 'utf8').trim();
+  const secret = crypto.randomBytes(32).toString('base64url');
+  fs.writeFileSync(COOKIE_SECRET_PATH, secret, { mode: 0o600 });
+  return secret;
+}
+
+const pollCookieSecret = ensurePollCookieSecret();
+
+function signedPollVoter(id) {
+  const signature = crypto.createHmac('sha256', pollCookieSecret).update(id).digest('base64url');
+  return `${id}.${signature}`;
+}
+
+function verifiedPollVoter(value) {
+  if (typeof value !== 'string' || !/^[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/.test(value)) return '';
+  const separator = value.indexOf('.');
+  const id = value.slice(0, separator);
+  const received = Buffer.from(value.slice(separator + 1));
+  const expected = Buffer.from(signedPollVoter(id).slice(separator + 1));
+  return received.length === expected.length && crypto.timingSafeEqual(received, expected) ? id : '';
+}
+
+function pollVoterFromRequest(req, res) {
+  const cookies = {};
+  for (const item of String(req.headers.cookie || '').split(';')) {
+    const separator = item.indexOf('=');
+    if (separator < 1) continue;
+    try { cookies[decodeURIComponent(item.slice(0, separator).trim())] = decodeURIComponent(item.slice(separator + 1).trim()); } catch (_) {}
+  }
+  let voterId = verifiedPollVoter(cookies.fm_poll_voter);
+  if (!voterId) {
+    voterId = crypto.randomBytes(16).toString('hex');
+    const secure = process.env.FAMILY_SECURE_COOKIES === '1' ? '; Secure' : '';
+    res.append('Set-Cookie', `fm_poll_voter=${encodeURIComponent(signedPollVoter(voterId))}; Path=/api/family-polls/share; Max-Age=31536000; HttpOnly; SameSite=Lax${secure}`);
+  }
+  return voterId;
 }
 
 // ---------- SSE 实时通知 ----------
@@ -512,12 +630,13 @@ app.get('/api/events', (req, res) => {
 });
 
 // 心跳: 防止代理(如 cpolar)/空闲连接被中间层掐断
-setInterval(() => {
+const sseHeartbeat = setInterval(() => {
   const payload = `data: ${JSON.stringify({ type: 'ping' })}\n\n`;
   for (const client of sseClients) {
     try { client.write(payload); } catch (e) { sseClients.delete(client); }
   }
-}, 25000).unref();
+}, 25000);
+sseHeartbeat.unref();
 
 function broadcast(event) {
   const payload = `data: ${JSON.stringify(event)}\n\n`;
@@ -582,14 +701,32 @@ function parseMentionIds(value) {
   }
 }
 
-function serializeSharedNote(row) {
-  const mentionIds = parseMentionIds(row.mention_user_ids);
-  const mentions = mentionIds.length
-    ? db.prepare(`SELECT id, name, avatar, color FROM users WHERE id IN (${mentionIds.map(() => '?').join(',')}) ORDER BY id`).all(...mentionIds)
+function serializeSharedNotes(rows) {
+  if (!rows.length) return [];
+  const parsedMentions = new Map(rows.map(row => [row.id, parseMentionIds(row.mention_user_ids)]));
+  const userIds = [...new Set(rows.flatMap(row => [...parsedMentions.get(row.id), positiveInt(row.completed_by)].filter(Boolean)))];
+  const users = userIds.length
+    ? db.prepare(`SELECT id, name, avatar, color FROM users WHERE id IN (${userIds.map(() => '?').join(',')})`).all(...userIds)
     : [];
-  const readUserIds = db.prepare('SELECT user_id FROM note_reads WHERE note_id = ?').all(row.id).map(item => item.user_id);
-  const completer = row.completed_by ? db.prepare('SELECT id, name, avatar FROM users WHERE id = ?').get(row.completed_by) : null;
-  return { ...row, mention_user_ids: mentionIds, mentions, read_user_ids: readUserIds, completer };
+  const usersById = new Map(users.map(user => [user.id, user]));
+  const noteIds = rows.map(row => row.id);
+  const reads = db.prepare(`SELECT note_id, user_id FROM note_reads WHERE note_id IN (${noteIds.map(() => '?').join(',')})`).all(...noteIds);
+  const readsByNote = new Map();
+  reads.forEach(read => readsByNote.set(read.note_id, [...(readsByNote.get(read.note_id) || []), read.user_id]));
+  return rows.map(row => {
+    const mentionIds = parsedMentions.get(row.id);
+    return {
+      ...row,
+      mention_user_ids: mentionIds,
+      mentions: mentionIds.map(id => usersById.get(id)).filter(Boolean).sort((a, b) => a.id - b.id),
+      read_user_ids: readsByNote.get(row.id) || [],
+      completer: row.completed_by ? usersById.get(row.completed_by) || null : null
+    };
+  });
+}
+
+function serializeSharedNote(row) {
+  return row ? serializeSharedNotes([row])[0] : null;
 }
 
 app.get('/api/shared-notes', (req, res) => {
@@ -599,7 +736,7 @@ app.get('/api/shared-notes', (req, res) => {
      FROM shared_notes n JOIN users u ON u.id = n.author_id
      WHERE n.note_date = ? ORDER BY n.pinned DESC, n.id DESC`
   ).all(date);
-  res.json({ date, notes: rows.map(serializeSharedNote) });
+  res.json({ date, notes: serializeSharedNotes(rows) });
 });
 
 app.get('/api/shared-notes/summary', (req, res) => {
@@ -650,7 +787,7 @@ app.get('/api/shared-notes/agenda', (req, res) => {
      ORDER BY CASE n.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
               CASE WHEN n.due_date = '' THEN 1 ELSE 0 END, n.due_date, n.id DESC LIMIT 60`
   ).all(end);
-  res.json({ from, end, notes: rows.map(serializeSharedNote) });
+  res.json({ from, end, notes: serializeSharedNotes(rows) });
 });
 
 app.post('/api/shared-notes', (req, res) => {
@@ -933,12 +1070,14 @@ app.post('/api/pet-care-records', (req, res) => {
   const clinic = typeof req.body.clinic === 'string' ? req.body.clinic.trim().slice(0, 100) : '';
   const medication = typeof req.body.medication === 'string' ? req.body.medication.trim().slice(0, 160) : '';
   const weight = req.body.weight_kg === '' || req.body.weight_kg == null ? null : Number(req.body.weight_kg);
-  const attachmentPath = typeof req.body.attachment_path === 'string' && /^\/uploads\/[a-zA-Z0-9._-]+$/.test(req.body.attachment_path) ? req.body.attachment_path : '';
+  const requestedAttachment = typeof req.body.attachment_path === 'string' ? req.body.attachment_path : '';
   if (!petId || !PET_CARE_TYPES.has(careType) || !isDate(careDate)) return res.status(400).json({ error: '请选择猫咪、护理项目和日期' });
   const pet = db.prepare('SELECT * FROM pets WHERE id = ?').get(petId);
   if (!pet) return res.status(404).json({ error: '猫咪不存在' });
   if (createdBy && !db.prepare('SELECT 1 FROM users WHERE id = ?').get(createdBy)) return res.status(404).json({ error: '记录人不存在' });
   if (weight != null && (!Number.isFinite(weight) || weight <= 0 || weight > 30)) return res.status(400).json({ error: '体重需在 0 到 30 千克之间' });
+  const attachmentPath = requestedAttachment ? promotePendingAttachment(requestedAttachment, UPLOAD_DIR) : '';
+  if (requestedAttachment && !attachmentPath) return res.status(400).json({ error: '病历附件已失效，请重新上传' });
   const interval = petCareInterval(petId, careType);
   const nextDueDate = interval ? addDays(careDate, interval) : '';
   const info = db.prepare(
@@ -986,13 +1125,13 @@ app.get('/api/home-dashboard', (req, res) => {
   const mealCounts = db.prepare(`SELECT meal, COUNT(*) AS count FROM selections WHERE date = ? GROUP BY meal`).all(today);
   const tasks = db.prepare(`SELECT n.id, n.content, n.due_date, n.note_date, n.priority, u.name AS author_name FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.is_task = 1 AND n.task_done = 0 ORDER BY CASE n.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, CASE WHEN n.due_date = '' THEN 1 ELSE 0 END, n.due_date, n.id DESC LIMIT 6`).all();
   const mentionCandidates = userId
-    ? db.prepare(`SELECT n.id, n.content, n.note_date, n.mention_user_ids, u.name AS author_name FROM shared_notes n JOIN users u ON u.id = n.author_id WHERE n.mention_user_ids <> '[]' ORDER BY n.id DESC LIMIT 80`).all()
+    ? db.prepare(`SELECT n.id, n.content, n.note_date, n.mention_user_ids, u.name AS author_name
+        FROM shared_notes n JOIN users u ON u.id = n.author_id
+        LEFT JOIN note_reads nr ON nr.note_id = n.id AND nr.user_id = ?
+        WHERE n.mention_user_ids <> '[]' AND nr.note_id IS NULL
+        ORDER BY n.id DESC LIMIT 80`).all(userId)
     : [];
-  const mentions = userId ? mentionCandidates.filter(note => {
-    const mentioned = parseMentionIds(note.mention_user_ids).includes(userId);
-    const read = db.prepare('SELECT 1 FROM note_reads WHERE note_id = ? AND user_id = ?').get(note.id, userId);
-    return mentioned && !read;
-  }).slice(0, 6) : [];
+  const mentions = userId ? mentionCandidates.filter(note => parseMentionIds(note.mention_user_ids).includes(userId)).slice(0, 6) : [];
   const petTasks = db.prepare(`SELECT t.id, t.due_date, t.care_type, p.name AS pet_name FROM pet_care_tasks t JOIN pets p ON p.id = t.pet_id WHERE t.done = 0 AND t.due_date <= ? ORDER BY t.due_date LIMIT 8`).all(petEnd);
   const wantToVisit = db.prepare(`SELECT id, title, region FROM recommendations WHERE visit_status = 'want' ORDER BY id DESC LIMIT 6`).all();
   res.json({ date: today, meals: mealCounts, tasks, mentions, pet_tasks: petTasks, want_to_visit: wantToVisit });
@@ -1019,16 +1158,8 @@ app.get('/api/family-timeline', (req, res) => {
 });
 
 // ---------- 菜品 API ----------
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = IMAGE_TYPES.get(file.mimetype) || '.jpg';
-    cb(null, Date.now() + '-' + crypto.randomBytes(4).toString('hex') + ext);
-  }
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (IMAGE_TYPES.has(file.mimetype)) cb(null, true);
@@ -1036,9 +1167,14 @@ const upload = multer({
   }
 });
 
-app.post('/api/pet-care-attachments', upload.single('attachment'), (req, res) => {
+app.post('/api/pet-care-attachments', uploadLimiter, upload.single('attachment'), async (req, res, next) => {
   if (!req.file) return res.status(400).json({ error: '请选择一张图片附件' });
-  res.status(201).json({ path: `/uploads/${req.file.filename}` });
+  try {
+    const image = await normalizeImageBuffer(req.file.buffer, UPLOAD_DIR, 'pending-pet');
+    res.status(201).json(image);
+  } catch (error) {
+    next(Object.assign(error, { status: 400 }));
+  }
 });
 
 app.get('/api/categories', (req, res) => {
@@ -1068,15 +1204,16 @@ app.get('/api/dishes/:id/recipe', (req, res) => {
   res.json(recipeForDish(dish));
 });
 
-app.post('/api/dishes', upload.single('image'), async (req, res, next) => {
+app.post('/api/dishes', uploadLimiter, upload.single('image'), async (req, res, next) => {
   try {
     const { name, description, category, image_url } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: '菜品名称不能为空' });
     const cleanName = name.trim().slice(0, 40);
     const dup = db.prepare('SELECT id FROM dishes WHERE name = ?').get(cleanName);
     if (dup) return res.status(400).json({ error: '这道菜已经上架啦,换个名字试试' });
-    let image = req.file ? '/uploads/' + req.file.filename : null;
+    let image = null;
     let warning = null;
+    if (req.file) image = (await normalizeImageBuffer(req.file.buffer, UPLOAD_DIR, 'dish')).path;
     // 支持从 URL 下载图片
     if (!image && image_url && image_url.trim()) {
       let url;
@@ -1088,20 +1225,16 @@ app.post('/api/dishes', upload.single('image'), async (req, res, next) => {
       try {
         const aborter = new AbortController();
         const timeout = setTimeout(() => aborter.abort(), 10000);
-        const response = await fetch(url, { signal: aborter.signal, redirect: 'error' });
-        clearTimeout(timeout);
+        let response;
+        try { response = await fetch(url, { signal: aborter.signal, redirect: 'error' }); }
+        finally { clearTimeout(timeout); }
         const contentType = (response.headers.get('content-type') || '').split(';')[0].toLowerCase();
         const contentLength = Number(response.headers.get('content-length') || 0);
         if (!response.ok || !IMAGE_TYPES.has(contentType) || contentLength > 5 * 1024 * 1024) {
           throw new Error('图片响应无效');
         }
-        const buffer = Buffer.from(await response.arrayBuffer());
-        if (buffer.length > 5 * 1024 * 1024) throw new Error('图片过大');
-        const ext = IMAGE_TYPES.get(contentType);
-        const fname = `dish-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-        const dest = path.join(UPLOAD_DIR, fname);
-        fs.writeFileSync(dest, buffer);
-        image = '/uploads/' + fname;
+        const buffer = await readLimitedResponse(response, 5 * 1024 * 1024);
+        image = (await normalizeImageBuffer(buffer, UPLOAD_DIR, 'dish')).path;
       } catch (e) {
         warning = '图片下载失败,已使用默认占位图';
       }
@@ -1118,7 +1251,7 @@ app.post('/api/dishes', upload.single('image'), async (req, res, next) => {
   }
 });
 
-app.delete('/api/dishes/:id', (req, res) => {
+app.delete('/api/dishes/:id', destructiveLimiter, (req, res) => {
   const dishId = positiveInt(req.params.id);
   if (!dishId) return res.status(400).json({ error: '菜品编号无效' });
   const dish = db.prepare('SELECT * FROM dishes WHERE id = ?').get(dishId);
@@ -1126,6 +1259,7 @@ app.delete('/api/dishes/:id', (req, res) => {
   db.transaction(() => {
     db.prepare('DELETE FROM selections WHERE dish_id = ?').run(dishId);
     db.prepare('DELETE FROM favorites WHERE dish_id = ?').run(dishId);
+    db.prepare('DELETE FROM vote_selections WHERE option_id IN (SELECT id FROM vote_options WHERE dish_id = ?)').run(dishId);
     db.prepare('DELETE FROM vote_options WHERE dish_id = ?').run(dishId);
     db.prepare('DELETE FROM dishes WHERE id = ?').run(dishId);
   })();
@@ -1224,12 +1358,18 @@ app.post('/api/select', (req, res) => {
       : `${user.name} 的${meal === 'lunch' ? '午饭' : '晚饭'}想吃「${dish.name}」`
   });
 
-  res.json({ ok: true });
+  const cooldownKey = `${userId}:${meal}:${date}`;
+  const lastExternalNotification = selectionNotificationCooldown.get(cooldownKey) || 0;
+  const shouldNotifyExternally = Date.now() - lastExternalNotification >= 10 * 60 * 1000;
+  if (shouldNotifyExternally) selectionNotificationCooldown.set(cooldownKey, Date.now());
+  res.json({ ok: true, notification_queued: shouldNotifyExternally });
 
-  // 触发邮件/短信通知(异步,不阻塞响应)
-  const targets = db.prepare('SELECT * FROM notify_targets ORDER BY id').all();
-  notify.notifySelection({ user_name: user.name, dish_name: dish.name, meal, targets })
-    .catch(error => console.error('[通知发送失败]', error.message));
+  // External notifications are cooled down per person/meal/date to prevent accidental SMS costs.
+  if (shouldNotifyExternally) {
+    const targets = db.prepare('SELECT * FROM notify_targets ORDER BY id').all();
+    notify.notifySelection({ user_name: user.name, dish_name: dish.name, meal, targets })
+      .catch(error => console.error('[通知发送失败]', error.message));
+  }
 });
 
 app.post('/api/select/note', (req, res) => {
@@ -1372,17 +1512,23 @@ app.get('/api/stats', (req, res) => {
 // ---------- 投票 API ----------
 app.get('/api/votes', (req, res) => {
   const votes = db.prepare('SELECT * FROM votes ORDER BY created_at DESC LIMIT 20').all();
-  const result = votes.map(v => {
-    const options = db.prepare(
-      `SELECT vo.id, vo.dish_id, d.name AS dish_name, d.image, d.category,
-              (SELECT COUNT(*) FROM vote_selections vs WHERE vs.option_id = vo.id) AS vote_count
-       FROM vote_options vo JOIN dishes d ON vo.dish_id = d.id WHERE vo.vote_id = ?`
-    ).all(v.id);
-    const totalVotes = db.prepare('SELECT COUNT(*) AS c FROM vote_selections WHERE vote_id = ?').get(v.id).c;
-    const userVote = req.query.user_id
-      ? db.prepare('SELECT option_id FROM vote_selections WHERE vote_id = ? AND user_id = ?').get(v.id, req.query.user_id)
-      : null;
-    return { ...v, options, totalVotes, userVote: userVote ? userVote.option_id : null };
+  if (!votes.length) return res.json([]);
+  const ids = votes.map(vote => vote.id);
+  const placeholders = ids.map(() => '?').join(',');
+  const options = db.prepare(
+    `SELECT vo.id, vo.vote_id, vo.dish_id, d.name AS dish_name, d.image, d.category, COUNT(vs.id) AS vote_count
+     FROM vote_options vo JOIN dishes d ON vo.dish_id = d.id
+     LEFT JOIN vote_selections vs ON vs.option_id = vo.id
+     WHERE vo.vote_id IN (${placeholders}) GROUP BY vo.id ORDER BY vo.id`
+  ).all(...ids);
+  const optionsByVote = new Map();
+  options.forEach(option => optionsByVote.set(option.vote_id, [...(optionsByVote.get(option.vote_id) || []), option]));
+  const userId = positiveInt(req.query.user_id);
+  const userVotes = userId ? db.prepare(`SELECT vote_id, option_id FROM vote_selections WHERE user_id = ? AND vote_id IN (${placeholders})`).all(userId, ...ids) : [];
+  const userVoteById = new Map(userVotes.map(item => [item.vote_id, item.option_id]));
+  const result = votes.map(vote => {
+    const voteOptions = optionsByVote.get(vote.id) || [];
+    return { ...vote, options: voteOptions, totalVotes: voteOptions.reduce((sum, option) => sum + option.vote_count, 0), userVote: userVoteById.get(vote.id) || null };
   });
   res.json(result);
 });
@@ -1423,9 +1569,11 @@ app.post('/api/votes/:id/vote', (req, res) => {
 
 app.post('/api/votes/:id/close', (req, res) => {
   const voteId = positiveInt(req.params.id);
+  const creatorId = positiveInt(req.body.created_by || req.body.user_id);
   if (!voteId) return res.status(400).json({ error: '投票编号无效' });
   const vote = db.prepare('SELECT * FROM votes WHERE id = ?').get(voteId);
   if (!vote) return res.status(404).json({ error: '投票不存在' });
+  if (!creatorId || vote.created_by !== creatorId) return res.status(403).json({ error: '只有发起人可以结束投票' });
   if (vote.status === 'closed') return res.json({ ok: true, alreadyClosed: true });
   // 自动将最高票转为选中
   const winner = db.prepare(
@@ -1445,17 +1593,36 @@ app.post('/api/votes/:id/close', (req, res) => {
 });
 
 // ---------- 家庭投票 API ----------
-function familyPollRecord(poll, voterKey = '') {
-  if (!poll) return null;
+function familyPollRecords(polls, voterKey = '') {
+  if (!polls.length) return [];
+  const pollIds = polls.map(poll => poll.id);
+  const placeholders = pollIds.map(() => '?').join(',');
   const options = db.prepare(
-    `SELECT o.id, o.label, o.sort_order, COUNT(v.id) AS vote_count
+    `SELECT o.id, o.poll_id, o.label, o.sort_order, COUNT(v.id) AS vote_count
      FROM family_poll_options o LEFT JOIN family_poll_votes v ON v.option_id = o.id
-     WHERE o.poll_id = ? GROUP BY o.id ORDER BY o.sort_order, o.id`
-  ).all(poll.id);
-  const totalVotes = options.reduce((sum, option) => sum + option.vote_count, 0);
-  const voterChoice = voterKey ? db.prepare('SELECT option_id FROM family_poll_votes WHERE poll_id = ? AND voter_key = ?').get(poll.id, voterKey)?.option_id || null : null;
-  const author = poll.created_by ? db.prepare('SELECT id, name, avatar FROM users WHERE id = ?').get(poll.created_by) : null;
-  return { ...poll, options, total_votes: totalVotes, voter_choice: voterChoice, author };
+     WHERE o.poll_id IN (${placeholders}) GROUP BY o.id ORDER BY o.poll_id, o.sort_order, o.id`
+  ).all(...pollIds);
+  const optionsByPoll = new Map();
+  options.forEach(option => optionsByPoll.set(option.poll_id, [...(optionsByPoll.get(option.poll_id) || []), option]));
+  const authorIds = [...new Set(polls.map(poll => positiveInt(poll.created_by)).filter(Boolean))];
+  const authors = authorIds.length ? db.prepare(`SELECT id, name, avatar FROM users WHERE id IN (${authorIds.map(() => '?').join(',')})`).all(...authorIds) : [];
+  const authorsById = new Map(authors.map(author => [author.id, author]));
+  const voterChoices = voterKey ? db.prepare(`SELECT poll_id, option_id FROM family_poll_votes WHERE voter_key = ? AND poll_id IN (${placeholders})`).all(voterKey, ...pollIds) : [];
+  const choiceByPoll = new Map(voterChoices.map(choice => [choice.poll_id, choice.option_id]));
+  return polls.map(poll => {
+    const pollOptions = optionsByPoll.get(poll.id) || [];
+    return {
+      ...poll,
+      options: pollOptions,
+      total_votes: pollOptions.reduce((sum, option) => sum + option.vote_count, 0),
+      voter_choice: choiceByPoll.get(poll.id) || null,
+      author: poll.created_by ? authorsById.get(poll.created_by) || null : null
+    };
+  });
+}
+
+function familyPollRecord(poll, voterKey = '') {
+  return poll ? familyPollRecords([poll], voterKey)[0] : null;
 }
 
 function createFamilyPollCode() {
@@ -1466,7 +1633,7 @@ function createFamilyPollCode() {
 
 app.get('/api/family-polls', (req, res) => {
   const polls = db.prepare('SELECT * FROM family_polls ORDER BY CASE status WHEN \'open\' THEN 0 ELSE 1 END, id DESC LIMIT 50').all();
-  res.json(polls.map(poll => familyPollRecord(poll)));
+  res.json(familyPollRecords(polls));
 });
 
 app.post('/api/family-polls', (req, res) => {
@@ -1493,18 +1660,18 @@ app.get('/api/family-polls/share/:code', (req, res) => {
   const code = typeof req.params.code === 'string' ? req.params.code.slice(0, 30) : '';
   const poll = db.prepare('SELECT * FROM family_polls WHERE share_code = ?').get(code);
   if (!poll) return res.status(404).json({ error: '投票链接不存在或已失效' });
-  res.json(familyPollRecord(poll, typeof req.query.voter_key === 'string' ? req.query.voter_key.slice(0, 80) : ''));
+  res.json(familyPollRecord(poll, pollVoterFromRequest(req, res)));
 });
 
 app.post('/api/family-polls/share/:code/vote', (req, res) => {
   const code = typeof req.params.code === 'string' ? req.params.code.slice(0, 30) : '';
   const optionId = positiveInt(req.body.option_id);
-  const voterKey = typeof req.body.voter_key === 'string' ? req.body.voter_key.trim().slice(0, 80) : '';
+  const voterKey = pollVoterFromRequest(req, res);
   const voterName = typeof req.body.voter_name === 'string' ? req.body.voter_name.trim().slice(0, 20) : '';
   const poll = db.prepare('SELECT * FROM family_polls WHERE share_code = ?').get(code);
   if (!poll || poll.status !== 'open') return res.status(400).json({ error: '投票不存在或已结束' });
   if (poll.deadline && poll.deadline < todayStr()) return res.status(400).json({ error: '投票已到截止日期' });
-  if (!optionId || !voterKey || !voterName) return res.status(400).json({ error: '请选择选项并填写昵称' });
+  if (!optionId || !voterName) return res.status(400).json({ error: '请选择选项并填写昵称' });
   if (!db.prepare('SELECT 1 FROM family_poll_options WHERE id = ? AND poll_id = ?').get(optionId, poll.id)) return res.status(400).json({ error: '投票选项无效' });
   db.prepare("INSERT INTO family_poll_votes (poll_id, option_id, voter_key, voter_name) VALUES (?, ?, ?, ?) ON CONFLICT(poll_id, voter_key) DO UPDATE SET option_id = excluded.option_id, voter_name = excluded.voter_name, created_at = datetime('now', 'localtime')").run(poll.id, optionId, voterKey, voterName);
   const result = familyPollRecord(poll, voterKey);
@@ -1528,9 +1695,9 @@ app.get('/api/reminders', (req, res) => {
   res.json(db.prepare('SELECT * FROM reminders ORDER BY meal').all());
 });
 
-app.post('/api/reminders', (req, res) => {
+app.post('/api/reminders', notificationConfigLimiter, (req, res) => {
   const { meal, remind_time, enabled } = req.body;
-  if (!meal || !remind_time) return res.status(400).json({ error: '参数不完整' });
+  if (!isMeal(meal) || !isTime(remind_time) || typeof enabled !== 'boolean') return res.status(400).json({ error: '提醒时段、时间或开关无效' });
   db.prepare('INSERT OR REPLACE INTO reminders (meal, remind_time, enabled) VALUES (?, ?, ?)').run(meal, remind_time, enabled ? 1 : 0);
   res.json({ ok: true });
 });
@@ -1568,16 +1735,30 @@ async function checkReminders() {
   }
 }
 // 每分钟检查一次提醒
-setInterval(checkReminders, 60000);
+const reminderTimer = setInterval(checkReminders, 60000);
+reminderTimer.unref();
+
+function runDailyMaintenance() {
+  cleanupPendingAttachments(UPLOAD_DIR);
+  db.prepare("DELETE FROM notifications WHERE created_at < datetime('now', '-180 days')").run();
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const [key, createdAt] of selectionNotificationCooldown) {
+    if (createdAt < cutoff) selectionNotificationCooldown.delete(key);
+  }
+}
+
+runDailyMaintenance();
+const maintenanceTimer = setInterval(runDailyMaintenance, 24 * 60 * 60 * 1000);
+maintenanceTimer.unref();
 
 // ---------- 通知 API ----------
 app.get('/api/notify/targets', (req, res) => {
-  res.json(db.prepare('SELECT * FROM notify_targets ORDER BY id').all());
+  res.json(db.prepare('SELECT * FROM notify_targets ORDER BY id').all().map(publicNotifyTarget));
 });
 
-app.post('/api/notify/targets', (req, res) => {
+app.post('/api/notify/targets', notificationConfigLimiter, (req, res) => {
   const { name, email, phone } = req.body;
-  if (!name) return res.status(400).json({ error: '请填写名称' });
+  if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: '请填写名称' });
   if (!email && !phone) return res.status(400).json({ error: '请至少填写邮箱或手机号' });
   const cleanEmail = (email || '').trim();
   const cleanPhone = String(phone || '').replace(/[\s-]/g, '').replace(/^\+86/, '');
@@ -1586,43 +1767,77 @@ app.post('/api/notify/targets', (req, res) => {
   const duplicate = db.prepare('SELECT id FROM notify_targets WHERE (? != \'\' AND email = ?) OR (? != \'\' AND phone = ?)').get(cleanEmail, cleanEmail, cleanPhone, cleanPhone);
   if (duplicate) return res.status(409).json({ error: '该通知方式已经添加' });
   const info = db.prepare('INSERT INTO notify_targets (name, email, phone) VALUES (?, ?, ?)').run(name.trim(), cleanEmail, cleanPhone);
-  res.json(db.prepare('SELECT * FROM notify_targets WHERE id = ?').get(info.lastInsertRowid));
+  res.json(publicNotifyTarget(db.prepare('SELECT * FROM notify_targets WHERE id = ?').get(info.lastInsertRowid)));
 });
 
-app.delete('/api/notify/targets/:id', (req, res) => {
-  db.prepare('DELETE FROM notify_targets WHERE id = ?').run(req.params.id);
+app.delete('/api/notify/targets/:id', destructiveLimiter, notificationConfigLimiter, (req, res) => {
+  const targetId = positiveInt(req.params.id);
+  if (!targetId) return res.status(400).json({ error: '通知人编号无效' });
+  db.prepare('DELETE FROM notify_targets WHERE id = ?').run(targetId);
   res.json({ ok: true });
 });
 
 app.get('/api/notify/config', (req, res) => {
   const cfg = notify.loadConfig();
-  // 不回传密码
-  const safe = {
-    email: { ...cfg.email, pass: cfg.email.pass ? '***' : '' },
-    sms: { ...cfg.sms, accessKeyId: cfg.sms.accessKeyId ? '***' : '', accessKeySecret: cfg.sms.accessKeySecret ? '***' : '', ...notify.getSmsStatus(cfg) },
-    targets: cfg.targets || db.prepare('SELECT * FROM notify_targets ORDER BY id').all()
-  };
-  res.json(safe);
+  const smsStatus = notify.getSmsStatus(cfg);
+  res.json({
+    email: {
+      enabled: Boolean(cfg.email.enabled),
+      configured: Boolean(cfg.email.host && cfg.email.user && cfg.email.pass),
+      host_masked: cfg.email.host ? `${cfg.email.host.slice(0, 4)}***` : '',
+      user_masked: notify.maskContact(cfg.email.user),
+      has_password: Boolean(cfg.email.pass)
+    },
+    sms: {
+      enabled: Boolean(cfg.sms.enabled),
+      configured: Boolean(cfg.sms.accessKeyId && cfg.sms.accessKeySecret),
+      has_access_key_id: Boolean(cfg.sms.accessKeyId),
+      has_access_key_secret: Boolean(cfg.sms.accessKeySecret),
+      has_sign_name: Boolean(cfg.sms.signName),
+      has_template_code: Boolean(cfg.sms.templateCode),
+      has_reminder_template_code: Boolean(cfg.sms.reminderTemplateCode),
+      ...smsStatus
+    }
+  });
 });
 
-app.post('/api/notify/config', (req, res) => {
+app.post('/api/notify/config', notificationConfigLimiter, async (req, res, next) => {
   const cfg = notify.loadConfig();
   const { email, sms } = req.body;
-  if (email) {
-    if (email.pass === '***') delete email.pass;
-    cfg.email = { ...cfg.email, ...email };
+  try {
+    if (email && typeof email === 'object' && !Array.isArray(email)) {
+      const nextEmail = { ...cfg.email };
+      if (typeof email.host === 'string' && email.host.trim()) nextEmail.host = await validatePublicHost(email.host.trim());
+      if (typeof email.user === 'string' && email.user.trim()) nextEmail.user = email.user.trim().slice(0, 160);
+      if (typeof email.pass === 'string' && email.pass && email.pass !== '***') nextEmail.pass = email.pass.slice(0, 300);
+      if (typeof email.from === 'string' && email.from.trim()) nextEmail.from = email.from.trim().slice(0, 160);
+      if (email.port != null) {
+        const port = Number(email.port);
+        if (!Number.isInteger(port) || port < 1 || port > 65535) return res.status(400).json({ error: 'SMTP 端口无效' });
+        nextEmail.port = port;
+      }
+      if (typeof email.secure === 'boolean') nextEmail.secure = email.secure;
+      if (typeof email.enabled === 'boolean') nextEmail.enabled = email.enabled;
+      else nextEmail.enabled = Boolean(nextEmail.host && nextEmail.user && nextEmail.pass);
+      cfg.email = nextEmail;
+    }
+    if (sms && typeof sms === 'object' && !Array.isArray(sms)) {
+      const nextSms = { ...cfg.sms };
+      for (const [field, maxLength] of [['accessKeyId', 160], ['accessKeySecret', 240], ['signName', 80], ['templateCode', 80], ['reminderTemplateCode', 80]]) {
+        if (typeof sms[field] === 'string' && sms[field] && sms[field] !== '***') nextSms[field] = sms[field].trim().slice(0, maxLength);
+      }
+      nextSms.enabled = typeof sms.enabled === 'boolean' ? sms.enabled : Boolean(nextSms.accessKeyId && nextSms.accessKeySecret && nextSms.signName && nextSms.templateCode);
+      cfg.sms = nextSms;
+    }
+    notify.saveConfig(cfg);
+    res.json({ ok: true });
+  } catch (error) {
+    if (/SMTP/.test(error.message)) return res.status(400).json({ error: error.message });
+    next(error);
   }
-  if (sms) {
-    if (sms.accessKeyId === '***') delete sms.accessKeyId;
-    if (sms.accessKeySecret === '***') delete sms.accessKeySecret;
-    cfg.sms = { ...cfg.sms, ...sms };
-    cfg.sms.enabled = Boolean(cfg.sms.accessKeyId && cfg.sms.accessKeySecret && cfg.sms.signName && cfg.sms.templateCode);
-  }
-  notify.saveConfig(cfg);
-  res.json({ ok: true });
 });
 
-app.post('/api/notify/test', async (req, res) => {
+app.post('/api/notify/test', notificationTestLimiter, async (req, res) => {
   const { user_name, dish_name, meal } = req.body;
   const targets = db.prepare('SELECT * FROM notify_targets ORDER BY id').all();
   const r = await notify.notifySelection({ user_name: user_name || '测试', dish_name: dish_name || '红烧肉', meal: meal || 'lunch', targets });
@@ -1635,15 +1850,22 @@ app.use('/api', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('[错误]', err.message);
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? '图片不能超过 5MB' : '图片上传失败: ' + err.message });
   }
+  if (err.status === 400 || /只支持图片文件/.test(err.message)) return res.status(400).json({ error: err.message });
+  console.error('[错误]', err.message);
   res.status(500).json({ error: '服务器开小差了,请稍后再试' });
 });
 
 // ---------- 启动 ----------
-app.listen(PORT, '0.0.0.0', () => {
+let httpServer = null;
+
+function startServer() {
+  if (httpServer) return httpServer;
+  const report = integrityReport(db);
+  if (!report.ok) console.error('[数据库完整性检查失败]', JSON.stringify(report));
+  httpServer = app.listen(PORT, '0.0.0.0', () => {
   const nets = os.networkInterfaces();
   const ips = [];
   for (const name of Object.keys(nets)) {
@@ -1658,4 +1880,30 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`  局域网访问: http://${ip}:${PORT}`);
   }
   console.log('==========================================');
-});
+  });
+  return httpServer;
+}
+
+function shutdown(signal) {
+  console.log(`[服务关闭] ${signal}`);
+  clearInterval(sseHeartbeat);
+  clearInterval(reminderTimer);
+  clearInterval(maintenanceTimer);
+  for (const client of sseClients) {
+    try { client.end(); } catch (_) {}
+  }
+  const finish = () => {
+    try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch (_) {}
+    try { db.close(); } catch (_) {}
+  };
+  if (httpServer) httpServer.close(finish);
+  else finish();
+}
+
+if (require.main === module) {
+  process.once('SIGINT', () => shutdown('SIGINT'));
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
+  startServer();
+}
+
+module.exports = { app, db, startServer, shutdown };

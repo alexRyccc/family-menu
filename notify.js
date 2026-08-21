@@ -3,25 +3,45 @@ const fs = require('fs');
 const path = require('path');
 
 // ---------- 配置加载 ----------
-const CONFIG_PATH = path.join(__dirname, 'notify-config.json');
+const CONFIG_PATH = process.env.FAMILY_NOTIFY_CONFIG_PATH || path.join(__dirname, 'notify-config.json');
+
+const DEFAULT_CONFIG = Object.freeze({
+  email: { enabled: false, host: '', port: 465, secure: true, user: '', pass: '', from: '' },
+  sms: { enabled: false, accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', reminderTemplateCode: '' },
+  targets: []
+});
 
 function loadConfig() {
-  const defaults = {
-    email: { enabled: false, host: '', port: 465, secure: true, user: '', pass: '', from: '' },
-    sms: { enabled: false, accessKeyId: '', accessKeySecret: '', signName: '', templateCode: '', reminderTemplateCode: '' },
-    targets: []
-  };
   try {
     if (fs.existsSync(CONFIG_PATH)) {
       const saved = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
-      return { ...defaults, ...saved };
+      return {
+        ...DEFAULT_CONFIG,
+        ...saved,
+        email: { ...DEFAULT_CONFIG.email, ...(saved.email || {}) },
+        sms: { ...DEFAULT_CONFIG.sms, ...(saved.sms || {}) },
+        targets: Array.isArray(saved.targets) ? saved.targets : []
+      };
     }
   } catch (e) { /* 忽略 */ }
-  return defaults;
+  return { ...DEFAULT_CONFIG, email: { ...DEFAULT_CONFIG.email }, sms: { ...DEFAULT_CONFIG.sms }, targets: [] };
 }
 
 function saveConfig(cfg) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
+  const temporary = `${CONFIG_PATH}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, JSON.stringify(cfg, null, 2), { mode: 0o600 });
+  fs.renameSync(temporary, CONFIG_PATH);
+  resetTransporter();
+}
+
+function maskContact(value) {
+  const text = String(value || '');
+  if (!text) return '';
+  if (text.includes('@')) {
+    const [local, domain] = text.split('@');
+    return `${local.slice(0, 1)}***@${domain || ''}`;
+  }
+  return text.length >= 7 ? `${text.slice(0, 3)}****${text.slice(-4)}` : '***';
 }
 
 function getSmsStatus(cfg) {
@@ -41,6 +61,11 @@ function getSmsStatus(cfg) {
 // ---------- 邮件 ----------
 let mailTransporter = null;
 
+function resetTransporter() {
+  if (mailTransporter && typeof mailTransporter.close === 'function') mailTransporter.close();
+  mailTransporter = null;
+}
+
 function getTransporter(cfg) {
   if (!cfg.email || !cfg.email.enabled) return null;
   if (mailTransporter) return mailTransporter;
@@ -57,7 +82,7 @@ async function sendEmail(to, subject, text, cfg) {
   const t = getTransporter(cfg);
   if (!t) return { ok: false, skip: true, reason: '邮件未配置' };
   try {
-    await t.sendMail({ from: cfg.email.from || cfg.email.user, to, subject, text, html: `<p>${text}</p>` });
+    await t.sendMail({ from: cfg.email.from || cfg.email.user, to, subject, text });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e.message };
@@ -102,11 +127,11 @@ async function notifySelection({ user_name, dish_name, meal, targets }) {
   for (const target of Array.isArray(targets) ? targets : (cfg.targets || [])) {
     if (target.email) {
       const r = await sendEmail(target.email, '猫家点菜通知', msg, cfg);
-      results.email.push({ to: target.email, ...r });
+      results.email.push({ to: maskContact(target.email), ...r });
     }
     if (target.phone) {
       const r = await sendSms(target.phone, { name: user_name, dish: dish_name, meal: mealName }, cfg);
-      results.sms.push({ to: target.phone, ...r });
+      results.sms.push({ to: maskContact(target.phone), ...r });
     }
   }
   return results;
@@ -122,16 +147,16 @@ async function notifyReminder({ meal, time, targets }) {
   for (const target of Array.isArray(targets) ? targets : []) {
     if (target.email) {
       const r = await sendEmail(target.email, '用餐提醒', msg, cfg);
-      results.email.push({ to: target.email, ...r });
+      results.email.push({ to: maskContact(target.email), ...r });
     }
     if (target.phone) {
       const r = status.remindersReady
         ? await sendSms(target.phone, { time, meal: mealName }, cfg, cfg.sms.reminderTemplateCode)
         : { ok: false, skip: true, reason: `用餐提醒短信未就绪：${status.reminderMissing.join('、') || status.missing.join('、') || '短信开关未启用'}` };
-      results.sms.push({ to: target.phone, ...r });
+      results.sms.push({ to: maskContact(target.phone), ...r });
     }
   }
   return results;
 }
 
-module.exports = { loadConfig, saveConfig, getSmsStatus, notifySelection, notifyReminder, sendEmail, sendSms };
+module.exports = { loadConfig, saveConfig, getSmsStatus, notifySelection, notifyReminder, sendEmail, sendSms, maskContact, resetTransporter };
