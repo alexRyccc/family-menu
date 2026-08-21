@@ -34,17 +34,24 @@ async function mediaSearch(query) {
 }
 
 async function download(url, destination) {
+  let lastError;
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    const response = await fetch(url, { headers: { 'user-agent': 'family-menu-travel-gallery/1.0' } });
-    if (response.ok) {
-      const data = Buffer.from(await response.arrayBuffer());
-      if (data.length < 12 * 1024) throw new Error('图片体积过小');
-      fs.writeFileSync(destination, data);
-      return;
+    try {
+      const response = await fetch(url, { headers: { 'user-agent': 'family-menu-travel-gallery/1.0' } });
+      if (response.ok) {
+        const data = Buffer.from(await response.arrayBuffer());
+        if (data.length < 12 * 1024) throw new Error('图片体积过小');
+        fs.writeFileSync(destination, data);
+        return;
+      }
+      lastError = new Error(`图片下载失败: ${response.status}`);
+      if (response.status !== 429 && response.status < 500) throw lastError;
+    } catch (error) {
+      lastError = error;
     }
-    if (response.status !== 429 || attempt === 3) throw new Error(`图片下载失败: ${response.status}`);
-    await sleep(5000 * (attempt + 1));
+    await sleep(2400 * (attempt + 1));
   }
+  throw lastError;
 }
 
 async function main() {
@@ -56,16 +63,17 @@ async function main() {
       console.log(`已存在: ${city.name}`);
       continue;
     }
-    let results = await mediaSearch(city.query);
-    if (results.length < 3) results = await mediaSearch(city.query.split(' ').slice(0, 2).join(' '));
-    if (results.length < 3) throw new Error(`${city.name} 没有找到足够的可下载图片`);
+    const candidates = await mediaSearch(city.query);
+    if (candidates.length < 3) throw new Error(`${city.name} 可用图片不足 3 张，请人工核对来源`);
     for (let index = 0; index < 3; index += 1) {
-      await download(results[index].url, files[index]);
+      if (fs.existsSync(files[index]) && fs.statSync(files[index]).size > 12 * 1024) continue;
+      await download(candidates[index].url, files[index]);
       console.log(`已下载: ${city.name} ${index + 1}/3`);
-      await sleep(1800);
+      await sleep(300);
     }
-    await sleep(500);
+    await sleep(250);
   }
+  console.log('原图已就绪。运行 python compress-recommendation-images.py 生成并压缩六图画廊。');
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

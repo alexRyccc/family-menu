@@ -2309,3 +2309,70 @@ button.family-poll-option:active { transform: translateY(1px); }
 @media (max-width: 700px) { .module-lens { display: flex; margin-right: -16px; overflow-x: auto; padding-right: 16px; border-right: 0; border-left: 0; scrollbar-width: none; }.module-lens::-webkit-scrollbar { display: none; }.module-lens button { flex: 0 0 108px; min-height: 69px; }.menu-lens { margin-right: 0; padding-right: 0; border-right: 1px solid #ead8b4; border-left: 1px solid #ead8b4; border-radius: 8px; }.menu-lens button { flex-basis: 105px; } }
 @media (prefers-reduced-motion: no-preference) { .module-lens { animation: lens-enter 240ms ease both; }.module-lens button { animation: lens-item-in 260ms ease both; }.module-lens button:nth-child(2) { animation-delay: 25ms; }.module-lens button:nth-child(3) { animation-delay: 50ms; }.module-lens button:nth-child(4) { animation-delay: 75ms; }.module-lens button:nth-child(5) { animation-delay: 100ms; } @keyframes lens-enter { from { opacity: 0; } to { opacity: 1; } } @keyframes lens-item-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } }
 @media (prefers-reduced-motion: reduce) { .module-lens, .module-lens button { animation: none; transition: none; } }
+
+/* ---------- Super recommendations ---------- */
+.super-recommendations { margin: 28px 0; padding: 22px 0 28px; border-bottom: 1px solid #ead8b4; }
+.super-recommendations-heading { margin: 0; }
+.super-recommendations-intro { max-width: 620px; margin: 9px 0 0; color: #80623c; font-size: 14px; line-height: 1.65; }
+.super-recommendation-filter { display: inline-flex; gap: 3px; margin: 16px 0 14px; padding: 3px; border: 1px solid #e4c999; border-radius: 8px; background: #fffdf8; }
+.super-recommendation-filter button { min-height: 34px; padding: 0 13px; border: 0; border-radius: 5px; background: transparent; color: #7b5b33; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; transition: background 180ms ease, color 180ms ease, transform 180ms ease; }
+.super-recommendation-filter button:hover { background: #fff3df; color: #a64d38; }
+.super-recommendation-filter button:active { transform: translateY(1px); }
+.super-recommendation-filter button[aria-pressed="true"] { background: #c95f45; color: #fffdf8; }
+.super-recommendation-filter button:focus-visible { outline: 3px solid rgba(201, 95, 69, .26); outline-offset: 2px; }
+.super-recommendation-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.super-recommendation-card { display: grid; grid-template-columns: 154px minmax(0, 1fr); min-width: 0; min-height: 268px; overflow: hidden; border: 1px solid #ead8b4; border-radius: 8px; background: #fffdf8; box-shadow: 0 8px 22px rgba(110, 74, 21, .05); }
+.super-recommendation-media { position: relative; min-height: 100%; overflow: hidden; background: #efe8da; }
+.super-recommendation-media img { display: block; width: 100%; height: 100%; min-height: 268px; object-fit: cover; transition: transform 260ms ease; }
+.super-recommendation-card:hover .super-recommendation-media img { transform: scale(1.025); }
+.super-recommendation-media > span { display: grid; min-height: 268px; place-items: center; color: #9b815f; font-size: 12px; }
+.super-recommendation-media > b { position: absolute; top: 10px; left: 10px; min-height: 25px; padding: 0 8px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 5px; background: rgba(59, 43, 23, .78); color: #fff; font-size: 11px; line-height: 23px; backdrop-filter: blur(6px); }
+.super-recommendation-copy { display: flex; min-width: 0; flex-direction: column; padding: 15px; }
+.super-recommendation-title { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.super-recommendation-title small { display: block; overflow: hidden; color: #a17c49; font-size: 10px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.super-recommendation-title h3 { margin: 3px 0 0; color: #46311a; font-size: 17px; line-height: 1.35; }
+.super-recommendation-title > span { flex: 0 0 auto; max-width: 94px; padding: 3px 6px; border-radius: 5px; background: #f5ead8; color: #8c642d; font-size: 10px; font-weight: 800; text-align: center; }
+.super-recommendation-copy > p { display: -webkit-box; margin: 10px 0 0; overflow: hidden; color: #775c39; font-size: 12px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.super-recommendation-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 9px; }
+.super-recommendation-tags span { padding: 3px 6px; border-radius: 999px; background: #f2eadb; color: #80613a; font-size: 10px; font-weight: 750; }
+.super-recommendation-reason { -webkit-line-clamp: 2 !important; }
+.super-recommendation-reason strong { margin-right: 5px; color: #b5533d; }
+.super-recommendation-actions { display: flex; gap: 7px; margin-top: auto; padding-top: 12px; }
+.super-recommendation-actions button { min-height: 34px; flex: 1; padding: 0 10px; border: 1px solid #d9bc87; border-radius: 6px; background: #fffaf0; color: #76542c; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease; }
+.super-recommendation-actions button:hover { border-color: #c95f45; color: #a34331; }
+.super-recommendation-actions button:active { transform: translateY(1px); }
+.super-recommendation-actions button:focus-visible { outline: 3px solid rgba(201, 95, 69, .25); outline-offset: 2px; }
+.super-recommendation-actions .super-save { border-color: #c95f45; background: #c95f45; color: #fff; }
+.super-recommendation-actions .super-save:hover { background: #b94f39; color: #fff; }
+.super-recommendation-actions button:disabled { border-color: #d9d0c0; background: #eee9df; color: #8b806e; cursor: default; opacity: .84; }
+.recommendation-gallery { position: relative; }
+.recommendation-gallery-count { position: absolute; right: 8px; bottom: 8px; min-height: 24px; padding: 0 8px; border: 1px solid rgba(255,255,255,.55); border-radius: 5px; background: rgba(55, 40, 23, .78); color: #fff; font-size: 10px; font-weight: 800; line-height: 22px; backdrop-filter: blur(5px); }
+[data-theme="dark"] .super-recommendations { border-color: #5b4d35; }
+[data-theme="dark"] .super-recommendations-intro, [data-theme="dark"] .super-recommendation-copy > p { color: #cdb995; }
+[data-theme="dark"] .super-recommendation-filter, [data-theme="dark"] .super-recommendation-card { border-color: #5b4d35; background: #2d291f; box-shadow: none; }
+[data-theme="dark"] .super-recommendation-filter button { color: #dfc9a6; }
+[data-theme="dark"] .super-recommendation-filter button:hover { background: #393225; }
+[data-theme="dark"] .super-recommendation-filter button[aria-pressed="true"] { background: #c95f45; color: #fff; }
+[data-theme="dark"] .super-recommendation-title h3 { color: #f5ead7; }
+[data-theme="dark"] .super-recommendation-title > span, [data-theme="dark"] .super-recommendation-tags span { background: #3b3427; color: #ddc59f; }
+[data-theme="dark"] .super-recommendation-actions button { border-color: #6e5c3e; background: #29251d; color: #e7d3b1; }
+[data-theme="dark"] .super-recommendation-actions .super-save { border-color: #c95f45; background: #c95f45; color: #fff; }
+@media (max-width: 760px) {
+  .super-recommendation-list { grid-template-columns: 1fr; }
+  .super-recommendation-card { grid-template-columns: 128px minmax(0, 1fr); min-height: 250px; }
+  .super-recommendation-media img, .super-recommendation-media > span { min-height: 250px; }
+}
+@media (max-width: 430px) {
+  .super-recommendations { margin-top: 22px; padding-top: 18px; }
+  .super-recommendations-heading { align-items: flex-start; }
+  .super-recommendations-heading > span { max-width: 140px; }
+  .super-recommendation-filter { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .super-recommendation-filter button { min-width: 0; padding: 0 6px; }
+  .super-recommendation-card { grid-template-columns: 1fr; min-height: 0; }
+  .super-recommendation-media, .super-recommendation-media img, .super-recommendation-media > span { min-height: 0; aspect-ratio: 16 / 9; }
+  .super-recommendation-copy { min-height: 244px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .super-recommendation-media img, .super-recommendation-filter button, .super-recommendation-actions button { transition: none; }
+  .super-recommendation-card:hover .super-recommendation-media img { transform: none; }
+}

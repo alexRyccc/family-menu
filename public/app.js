@@ -20,7 +20,7 @@
     repeatLast: $('#btnRepeatLast'), avoidRepeat: $('#btnAvoidRepeat'), stats: $('#statsContent'), recipeTitle: $('#recipeTitle'), recipeEyebrow: $('#recipeEyebrow'), recipeMeta: $('#recipeMeta'), recipeIngredients: $('#recipeIngredients'), ingredientProgress: $('#ingredientProgress'), recipeSteps: $('#recipeSteps'), recipeProgress: $('#recipeProgress'), recipeTip: $('#recipeTip'), recipeServings: $('#recipeServings'), recipeTimer: $('#recipeTimer'),
     notesView: $('#notesView'), notesList: $('#notesList'), noteDate: $('#noteDate'), noteAuthor: $('#noteAuthor'), noteContent: $('#noteContent'), mentionPicker: $('#mentionPicker'), noteCount: $('#noteCount'), noteSaveStatus: $('#noteSaveStatus'), notesDateLabel: $('#notesDateLabel'), noteFilter: $('#noteFilter'), selectionNote: $('#selectionNote'), notesWeekSummary: $('#notesWeekSummary'), noteIsTask: $('#noteIsTask'), noteDueDate: $('#noteDueDate'), notePriority: $('#notePriority'), notesCalendar: $('#notesCalendar'), notesAgenda: $('#notesAgenda'), notesCalendarTitle: $('#notesCalendarTitle'),
     petsView: $('#petsView'), petGrid: $('#petGrid'), petRecords: $('#petRecords'), petRecordCount: $('#petRecordCount'), petAttentionCount: $('#petAttentionCount'), petRecordPet: $('#petRecordPet'), petRecordType: $('#petRecordType'), petRecordDate: $('#petRecordDate'), petRecordAuthor: $('#petRecordAuthor'), petRecordNote: $('#petRecordNote'), petRecordNoteCount: $('#petRecordNoteCount'), petRecordStatus: $('#petRecordStatus'), petCareTypeFilter: $('#petCareTypeFilter'), petDetailContent: $('#petDetailContent'), petRecordClinic: $('#petRecordClinic'), petRecordMedication: $('#petRecordMedication'), petRecordWeight: $('#petRecordWeight'), petRecordInterval: $('#petRecordInterval'), petRecordAttachment: $('#petRecordAttachment'),
-    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), recommendationTimeline: $('#recommendationTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary'),
+    recommendationsView: $('#recommendationsView'), recommendationMap: $('#recommendationMap'), recommendationMapCaption: $('#recommendationMapCaption'), recommendationStats: $('#recommendationStats'), recommendationList: $('#recommendationList'), checkinList: $('#checkinList'), checkinCount: $('#checkinCount'), recommendationTitle: $('#recommendationTitle'), recommendationKind: $('#recommendationKind'), recommendationAuthor: $('#recommendationAuthor'), recommendationRegion: $('#recommendationRegion'), recommendationAddress: $('#recommendationAddress'), recommendationLatitude: $('#recommendationLatitude'), recommendationLongitude: $('#recommendationLongitude'), recommendationDescription: $('#recommendationDescription'), recommendationSaveStatus: $('#recommendationSaveStatus'), checkinRecommendation: $('#checkinRecommendation'), checkinDate: $('#checkinDate'), checkinAuthor: $('#checkinAuthor'), checkinRegion: $('#checkinRegion'), checkinAddress: $('#checkinAddress'), checkinLatitude: $('#checkinLatitude'), checkinLongitude: $('#checkinLongitude'), checkinNote: $('#checkinNote'), checkinSaveStatus: $('#checkinSaveStatus'), recommendationRegionFilter: $('#recommendationRegionFilter'), recommendationYearFilter: $('#recommendationYearFilter'), galleryContent: $('#galleryContent'), recommendationRating: $('#recommendationRating'), recommendationVisitStatus: $('#recommendationVisitStatus'), recommendationTags: $('#recommendationTags'), recommendationRevisitReason: $('#recommendationRevisitReason'), homeTodos: $('#homeTodayTodos'), recommendationTimeline: $('#recommendationTimeline'), preferenceBar: $('#preferenceBar'), preferencePicker: $('#preferencePicker'), shoppingList: $('#shoppingList'), shoppingSummary: $('#shoppingSummary'), superRecommendationList: $('#superRecommendationList'), superRecommendationStats: $('#superRecommendationStats'),
     pollsView: $('#pollsView'), pollsList: $('#pollsList'), pollTitle: $('#pollTitle'), pollDescription: $('#pollDescription'), pollDeadline: $('#pollDeadline'), pollAuthor: $('#pollAuthor'), pollOptionInputs: $('#pollOptionInputs'), pollCreateStatus: $('#pollCreateStatus'), sharedPollContent: $('#sharedPollContent'),
     menuLens: $('#menuLens'), notesLens: $('#notesLens'), petsLens: $('#petsLens'), recommendationsLens: $('#recommendationsLens'), pollsLens: $('#pollsLens')
   };
@@ -37,7 +37,7 @@
   ];
   const state = {
     me: null, users: [], dishes: [], categories: [], favorites: new Set(), selections: { lunch: null, dinner: null }, recommendations: { frequent: [], never: [] }, dishMode: 'smart',
-    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], checkins: [], familyTimeline: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', recommendationVisit: 'all', recommendationRatingFilter: 0, recommendationTravelOnly: false, mapRecommendationId: null, preferences: [], homeDashboard: null, familyPolls: [], sharedPoll: null
+    meal: localStorage.getItem('fm_last_meal') || (new Date().getHours() >= 14 ? 'dinner' : 'lunch'), date: today(), category: '全部', query: '', onlyFavorites: false, avoidRecent: false, recentSelection: null, weeklyData: null, recipe: null, recipeDone: new Set(), ingredientDone: new Set(), servings: 2, timerEndsAt: null, timerInterval: null, plan: [], feed: [], selectedAvatar: '🐱', eventSource: null, retryTimer: null, retries: 0, shakeDish: null, view: 'home', currentStep: 1, notes: [], noteFilter: '', notePinnedOnly: false, noteViewFilter: 'all', noteSummary: null, noteCalendarMonth: today().slice(0, 7), noteCalendarDays: [], noteAgenda: [], justAddedNoteId: null, pets: [], petRecords: [], petTasks: [], petTemplates: [], petFilter: 'all', petCareFilter: 'all', selectedPetId: null, savedRecommendations: [], superRecommendations: [], superRecommendationFilter: 'all', checkins: [], familyTimeline: [], recommendationFilter: 'all', recommendationRegion: 'all', recommendationYear: 'all', recommendationVisit: 'all', recommendationRatingFilter: 0, recommendationTravelOnly: false, mapRecommendationId: null, preferences: [], homeDashboard: null, familyPolls: [], sharedPoll: null
   };
   let toastTimer;
   let lastFocus = null;
@@ -830,7 +830,7 @@
     dom.recommendationList.innerHTML = visible.map(item => {
       const type = recommendationTypes[item.kind] || recommendationTypes.place;
       const mapButton = hasCoordinates(item) ? `<button type="button" data-show-recommendation="${item.id}">地图查看</button>` : '';
-      const gallery = Array.isArray(item.images) && item.images.length ? `<button class="recommendation-gallery" type="button" data-open-gallery="${item.id}" aria-label="查看${esc(item.title)}的${item.images.length}张城市图片">${item.images.slice(0, 3).map(image => `<img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}" loading="lazy" decoding="async">`).join('')}</button>` : '';
+      const gallery = Array.isArray(item.images) && item.images.length ? `<button class="recommendation-gallery" type="button" data-open-gallery="${item.id}" aria-label="查看${esc(item.title)}的${item.images.length}张城市图片">${item.images.slice(0, 3).map(image => `<img src="${esc(image.image_path)}" alt="${esc(image.caption || `${item.title} 城市印象`)}" loading="lazy" decoding="async">`).join('')}<span class="recommendation-gallery-count">${item.images.length} 张</span></button>` : '';
       const date = item.visited_label || String(item.created_at || '').slice(0, 10);
       let tags = [];
       try { tags = Array.isArray(item.tags) ? item.tags : JSON.parse(item.tags || '[]'); } catch (_) { tags = []; }
@@ -841,6 +841,48 @@
     }).join('') || '<div class="notes-empty"><strong>还没有推荐</strong><span>把一家人觉得值得的地点、商家和商品先存下来。</span></div>';
     const target = state.savedRecommendations.find(item => item.id === state.mapRecommendationId) || state.savedRecommendations.find(hasCoordinates);
     setMapTarget(target, target?.title);
+  }
+
+  function superRecommendationSaved(item) {
+    return state.savedRecommendations.some(record => record.title === item.title && record.region === item.region);
+  }
+
+  function renderSuperRecommendations() {
+    if (!dom.superRecommendationList) return;
+    const visible = state.superRecommendations.filter(item => state.superRecommendationFilter === 'all' || item.group === state.superRecommendationFilter);
+    const savedCount = state.superRecommendations.filter(superRecommendationSaved).length;
+    dom.superRecommendationStats.textContent = `${state.superRecommendations.length} 个精选 · ${savedCount} 个已加入清单`;
+    dom.superRecommendationList.setAttribute('aria-busy', 'false');
+    dom.superRecommendationList.innerHTML = visible.map(item => {
+      const saved = superRecommendationSaved(item);
+      return `<article class="super-recommendation-card"><div class="super-recommendation-media">${item.image_path ? `<img src="${esc(item.image_path)}" alt="${esc(item.title)}实景" loading="lazy" decoding="async">` : '<span>暂无图片</span>'}<b>${esc(item.category)}</b></div><div class="super-recommendation-copy"><div class="super-recommendation-title"><div><small>${esc(item.region)}</small><h3>${esc(item.title)}</h3></div><span>${esc(item.best_time)}</span></div><p>${esc(item.description)}</p><div class="super-recommendation-tags">${item.tags.map(tag => `<span>${esc(tag)}</span>`).join('')}</div><p class="super-recommendation-reason"><strong>猫家建议</strong>${esc(item.reason)}</p><div class="super-recommendation-actions"><button type="button" data-super-map="${esc(item.key)}">地图</button><button class="super-save" type="button" data-super-save="${esc(item.key)}" ${saved ? 'disabled' : ''}>${saved ? '已在清单' : '加入想去'}</button></div></div></article>`;
+    }).join('') || '<div class="notes-empty"><strong>这个分组还没有推荐</strong><span>切换另一个分组看看。</span></div>';
+  }
+
+  function showSuperRecommendation(key) {
+    const item = state.superRecommendations.find(record => record.key === key);
+    if (!item || !hasCoordinates(item)) return toast('这个地点暂时没有坐标', 'info');
+    setMapTarget(item, item.title);
+    dom.recommendationMap.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+  }
+
+  async function saveSuperRecommendation(key, button) {
+    const item = state.superRecommendations.find(record => record.key === key);
+    if (!item || superRecommendationSaved(item)) return;
+    button.disabled = true;
+    button.textContent = '正在加入...';
+    try {
+      await api('/api/family-recommendations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: item.title, kind: 'place', description: item.description, region: item.region, address: item.address, latitude: item.latitude, longitude: item.longitude, rating: 5, tags: item.tags, revisit_reason: item.reason, visit_status: 'want', created_by: state.me?.id || null })
+      });
+      await loadRecommendationData();
+      toast(`${item.title}已加入想去清单`, 'success');
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = '加入想去';
+      throw error;
+    }
   }
 
   function renderRecommendationRegions() {
@@ -878,12 +920,14 @@
   }
 
   async function loadRecommendationData() {
-    const [recommendations, checkins, timeline] = await Promise.all([api('/api/family-recommendations'), api('/api/family-checkins'), api('/api/family-timeline?limit=36')]);
+    const [recommendations, superRecommendations, checkins, timeline] = await Promise.all([api('/api/family-recommendations'), api('/api/super-recommendations'), api('/api/family-checkins'), api('/api/family-timeline?limit=36')]);
     state.savedRecommendations = recommendations;
+    state.superRecommendations = superRecommendations;
     state.checkins = checkins;
     state.familyTimeline = timeline;
     renderRecommendationForms();
     renderRecommendationRegions();
+    renderSuperRecommendations();
     renderRecommendations();
     renderCheckins();
     renderRecommendationTimeline();
@@ -1733,6 +1777,9 @@
       if (button.dataset.noteQuick) return openNoteQuick(button.dataset.noteQuick);
       if (button.dataset.petQuick) return openPetQuick(button.dataset.petQuick);
       if (button.dataset.recommendationQuick) return runRecommendationQuick(button.dataset.recommendationQuick);
+      if (button.dataset.superFilter) { state.superRecommendationFilter = button.dataset.superFilter; $$('.super-recommendation-filter button').forEach(item => item.setAttribute('aria-pressed', String(item === button))); return renderSuperRecommendations(); }
+      if (button.dataset.superMap) return showSuperRecommendation(button.dataset.superMap);
+      if (button.dataset.superSave) return saveSuperRecommendation(button.dataset.superSave, button);
       if (button.dataset.pollTemplate) return openPollComposer(button.dataset.pollTemplate);
       if (button.dataset.lensAction) return runLensAction(button.dataset.lensAction);
       if (button.id === 'btnRefreshHome') return loadHomeData();

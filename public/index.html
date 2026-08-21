@@ -328,6 +328,22 @@
       </nav>
       <section id="recommendationsLens" class="module-lens" aria-label="推荐清单状态速览"></section>
 
+      <section class="super-recommendations" aria-labelledby="superRecommendationsTitle">
+        <div class="recommendations-section-heading super-recommendations-heading">
+          <div><p class="notes-kicker">SUPER PICKS</p><h2 id="superRecommendationsTitle">超级推荐</h2></div>
+          <span id="superRecommendationStats" aria-live="polite">正在准备精选地点...</span>
+        </div>
+        <p class="super-recommendations-intro">20 个值得专程去的地方：世界级景点，加上成都本地吃喝玩乐。</p>
+        <div class="super-recommendation-filter" role="group" aria-label="筛选超级推荐">
+          <button type="button" data-super-filter="all" aria-pressed="true">全部 20</button>
+          <button type="button" data-super-filter="world" aria-pressed="false">国内外景点</button>
+          <button type="button" data-super-filter="chengdu" aria-pressed="false">成都吃喝玩乐</button>
+        </div>
+        <div id="superRecommendationList" class="super-recommendation-list" aria-live="polite" aria-busy="true">
+          <div class="notes-empty"><strong>正在载入超级推荐</strong><span>马上就好。</span></div>
+        </div>
+      </section>
+
       <section class="recommendation-map-section" aria-labelledby="recommendationMapTitle">
         <div class="recommendations-section-heading"><div><p class="notes-kicker">MAP</p><h2 id="recommendationMapTitle">免费地图定位</h2></div><button id="btnOpenCheckin" class="map-checkin-button" type="button">打卡</button></div>
         <div class="recommendation-map-frame"><iframe id="recommendationMap" title="推荐地点地图" loading="lazy" referrerpolicy="no-referrer"></iframe></div>

@@ -4,6 +4,9 @@
   "description": "家庭点菜小程序 - 局域网多人使用",
   "main": "server.js",
   "scripts": {
+    "images:compress": "python compress-recommendation-images.py",
+    "images:super": "node download-super-images.js && python compress-recommendation-images.py",
+    "images:travel": "node download-travel-images.js && python compress-recommendation-images.py",
     "seed:prepared": "node seed-prepared-menu.js",
     "seed:world": "node seed-world-menu.js",
     "start": "node seed.js && node seed-prepared-menu.js && node seed-world-menu.js && node server.js"

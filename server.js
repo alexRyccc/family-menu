@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const notify = require('./notify');
 const { travelCities } = require('./travel-cities');
+const { superRecommendations } = require('./super-recommendations');
 
 const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'data', 'family.db');
@@ -332,7 +333,7 @@ const seedTravelCities = db.transaction(() => {
     const existing = find.get(city.key);
     const id = existing?.id || insert.run(city.name, 'place', city.description, city.country, city.name, city.latitude, city.longitude, city.dateLabel, city.key).lastInsertRowid;
     if (existing) update.run(city.name, 'place', city.description, city.country, city.name, city.latitude, city.longitude, city.dateLabel, id);
-    for (let index = 1; index <= 3; index += 1) {
+    for (let index = 1; index <= 6; index += 1) {
       const imagePath = `/assets/travel/${city.key}-${index}.jpg`;
       if (fs.existsSync(path.join(__dirname, 'public', imagePath))) addImage.run(id, imagePath, `${city.name} · 城市印象 ${index}`, index);
     }
@@ -741,6 +742,13 @@ app.patch('/api/shared-notes/:id/task', (req, res) => {
 // ---------- 宠物清单 API ----------
 const PET_CARE_TYPES = new Set(['vaccine', 'internal_deworming', 'external_deworming', 'bath', 'nail_trim', 'health_check', 'vet_visit', 'weight']);
 const RECOMMENDATION_KINDS = new Set(['place', 'merchant', 'product']);
+
+app.get('/api/super-recommendations', (req, res) => {
+  res.json(superRecommendations.map(item => ({
+    ...item,
+    image_path: fs.existsSync(path.join(__dirname, 'public', item.image_path)) ? item.image_path : ''
+  })));
+});
 
 function petCareInterval(petId, careType) {
   const custom = db.prepare('SELECT interval_days FROM pet_care_templates WHERE pet_id = ? AND care_type = ?').get(petId, careType);
